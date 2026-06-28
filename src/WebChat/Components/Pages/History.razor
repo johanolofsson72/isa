@@ -1,0 +1,143 @@
+@page "/history"
+@using System.Text.Json
+@using WebChat.Services
+@using Microsoft.AspNetCore.Components.Web.Infrastructure
+@inject IJSRuntime JSRuntime
+@inject NavigationManager NavigationManager
+@inject HistoryService HistoryService
+
+<PageTitle>Arbetsflödeshistorik - Isa</PageTitle>
+
+<link href="css/history-mobile.css" rel="stylesheet" />
+
+<div class="history-container container-fluid">
+    <div class="page-header d-flex justify-content-between align-items-center mb-4">
+        <h1 class="text-primary mb-0">
+            <i class="bi bi-clock-history me-2"></i>Historik
+        </h1>
+        <div class="history-header-controls d-flex gap-2">
+            <select class="form-select" @bind="_selectedFilter" @bind:after="LoadHistoryAsync">
+                <option value="all">All historik</option>
+                <option value="today">Idag</option>
+                <option value="week">Denna vecka</option>
+                <option value="month">Denna månad</option>
+            </select>
+            <button class="btn btn-outline-primary @(_isLoading ? "rotating" : "")" @onclick="LoadHistoryAsync" title="Uppdatera" disabled="@_isLoading">
+                <i class="bi bi-arrow-repeat"></i>
+            </button>
+        </div>
+    </div>
+    
+    <div class="history-list">
+        @if (_isLoading)
+        {
+            <div class="loading-container">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Laddar...</span>
+                </div>
+            </div>
+        }
+        else if (_historyEntries.Count == 0)
+        {
+            <div class="empty-state">
+                <span class="bi bi-clock-history empty-icon"></span>
+                <h3>Inga arbetsflödeskörningar ännu</h3>
+                <p>Historik för arbetsflödeskörningar kommer att visas här</p>
+            </div>
+        }
+        else
+        {
+            @foreach (var dateGroup in _historyEntries.GroupBy(h => h.Timestamp.Date))
+            {
+                <div class="history-date-group mb-4">
+                    <h3 class="date-header text-secondary mb-3">
+                        <i class="bi bi-calendar3 me-2"></i>@FormatDate(dateGroup.Key)
+                    </h3>
+
+                    <div class="history-list">
+                        @foreach (var item in dateGroup)
+                        {
+                            <div class="history-card card h-100" @onclick="() => ViewConversation(item.Id)" style="cursor: pointer;">
+                                <div class="card-body d-flex flex-column">
+                                    <h5 class="card-title history-title">@item.Title</h5>
+                                    <p class="card-text history-preview flex-grow-1">@item.Preview</p>
+                                    <div class="history-footer d-flex justify-content-between align-items-center mt-auto">
+                                        <small class="text-muted">
+                                            <i class="bi bi-clock me-1"></i>@item.Timestamp.ToString("HH:mm")
+                                        </small>
+                                        <small class="text-muted">
+                                            <i class="bi bi-chat-dots me-1"></i>@(item.MessageCount) meddelanden
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+        }
+    </div>
+    
+    @if (_errorMessage is not null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show mt-3" role="alert">
+            <strong>Fel:</strong> @_errorMessage
+            <button type="button" class="btn-close" @onclick="() => _errorMessage = null" aria-label="Stäng"></button>
+        </div>
+    }
+</div>
+
+@code {
+    private List<HistoryEntryModel> _historyEntries = new();
+    private string _selectedFilter = "all";
+    private bool _isLoading = false;
+    private string? _errorMessage;
+    
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadHistoryAsync();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            // Ensure mobile scrolling works on this page
+            await JSRuntime.InvokeVoidAsync("ensureMobileScrolling");
+        }
+    }
+    
+    private async Task LoadHistoryAsync()
+    {
+        try
+        {
+            _isLoading = true;
+            _historyEntries = await HistoryService.GetHistoryEntriesAsync(_selectedFilter);
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Misslyckades med att ladda historik: {ex.Message}";
+        }
+        finally
+        {
+            _isLoading = false;
+            StateHasChanged();
+        }
+    }
+    
+    private string FormatDate(DateTime date)
+    {
+        if (date.Date == DateTime.Now.Date)
+            return "Idag";
+        else if (date.Date == DateTime.Now.AddDays(-1).Date)
+            return "Igår";
+        else
+            return date.ToString("d MMMM yyyy");
+    }
+    
+    private void ViewConversation(string id)
+    {
+        // Navigate to the detailed workflow execution page
+        NavigationManager.NavigateTo($"/workflow-execution/{id}");
+    }
+}

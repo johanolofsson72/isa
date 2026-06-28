@@ -1,0 +1,131 @@
+#FLAGGA 0
+#PROGRAM "Fortnox" 4.0
+#FORMAT PC8
+#GEN 20241107
+#SIETYP 4
+#PROSA "Demo Ekonomi AB"
+#FNAMN "Demo Ekonomi AB"
+#ORGNR 5566778899
+#BKOD SNI
+#ADRESS "Storgatan 123" "11122 Stockholm" "08-123456"
+#FTYP AB
+#KPTYP BAS2019
+
+# Kontoplaner enligt BAS
+#KONTO 1510 "Kundfordringar"
+#KONTO 1630 "Förutbetalda kostnader"
+#KONTO 1910 "Kassa"
+#KONTO 2440 "Leverantörsskulder"
+#KONTO 2510 "Kortfristiga skulder"
+#KONTO 2611 "Utgående moms 25%"
+#KONTO 2640 "Personalskatt"
+#KONTO 3000 "Försäljning varor"
+#KONTO 3001 "Försäljning tjänster"
+#KONTO 3002 "Försäljning konsulttjänster"
+#KONTO 4000 "Inköp varor"
+#KONTO 5010 "Lokalhyra"
+#KONTO 5400 "Konsulttjänster"
+#KONTO 5410 "Telefon"
+#KONTO 5800 "Resor"
+#KONTO 6000 "Löner"
+#KONTO 6010 "Semesterlöner"
+#KONTO 6200 "Sociala avgifter"
+#KONTO 7010 "Ränteintäkter"
+#KONTO 7510 "Räntekostnader"
+
+# Projekt
+#OBJEKT 1 "Projekt Alpha"
+#OBJEKT 2 "Projekt Beta"
+#OBJEKT 3 "Projekt Gamma"
+
+# Transaktioner för 2024 - Kvartal 1
+#VER "A" "1001" 20240115 "Försäljning Projekt Alpha"
+#TRANS 3001 {1} -125000.00 20240115 "Konsulttjänster Projekt Alpha"
+#TRANS 2611 {} -31250.00 20240115 "Utgående moms 25%"
+#TRANS 1510 {} 156250.00 20240115 "Kundfordran"
+
+#VER "A" "1002" 20240120 "Inköp material Projekt Alpha"
+#TRANS 4000 {1} 35000.00 20240120 "Material Projekt Alpha"
+#TRANS 2611 {} 8750.00 20240120 "Ingående moms 25%"
+#TRANS 2440 {} -43750.00 20240120 "Leverantörsskuld"
+
+#VER "A" "1003" 20240201 "Löner januari"
+#TRANS 6000 {} 85000.00 20240201 "Löner"
+#TRANS 6200 {} 26775.00 20240201 "Sociala avgifter"
+#TRANS 2640 {} -27200.00 20240201 "Personalskatt"
+#TRANS 1910 {} -84575.00 20240201 "Utbetalning löner"
+
+#VER "A" "1004" 20240215 "Försäljning Projekt Beta"
+#TRANS 3002 {2} -95000.00 20240215 "Konsulttjänster Projekt Beta"
+#TRANS 2611 {} -23750.00 20240215 "Utgående moms 25%"
+#TRANS 1510 {} 118750.00 20240215 "Kundfordran"
+
+#VER "A" "1005" 20240301 "Lokalhyra mars"
+#TRANS 5010 {} 25000.00 20240301 "Lokalhyra"
+#TRANS 2611 {} 6250.00 20240301 "Ingående moms 25%"
+#TRANS 2440 {} -31250.00 20240301 "Leverantörsskuld"
+
+# Transaktioner för 2024 - Kvartal 2
+#VER "A" "2001" 20240415 "Försäljning Projekt Gamma"
+#TRANS 3001 {3} -155000.00 20240415 "Konsulttjänster Projekt Gamma"
+#TRANS 2611 {} -38750.00 20240415 "Utgående moms 25%"
+#TRANS 1510 {} 193750.00 20240415 "Kundfordran"
+
+#VER "A" "2002" 20240501 "Löner april"
+#TRANS 6000 {} 92000.00 20240501 "Löner"
+#TRANS 6200 {} 28980.00 20240501 "Sociala avgifter"
+#TRANS 2640 {} -29440.00 20240501 "Personalskatt"
+#TRANS 1910 {} -91540.00 20240501 "Utbetalning löner"
+
+#VER "A" "2003" 20240520 "Konsulttjänster externa"
+#TRANS 5400 {} 45000.00 20240520 "Externa konsulter"
+#TRANS 2611 {} 11250.00 20240520 "Ingående moms 25%"
+#TRANS 2440 {} -56250.00 20240520 "Leverantörsskuld"
+
+#VER "A" "2004" 20240615 "Försäljning Projekt Alpha Q2"
+#TRANS 3001 {1} -185000.00 20240615 "Konsulttjänster Projekt Alpha Q2"
+#TRANS 2611 {} -46250.00 20240615 "Utgående moms 25%"
+#TRANS 1510 {} 231250.00 20240615 "Kundfordran"
+
+# Transaktioner för 2024 - Kvartal 3
+#VER "A" "3001" 20240715 "Försäljning Projekt Beta Q3"
+#TRANS 3002 {2} -165000.00 20240715 "Konsulttjänster Projekt Beta Q3"
+#TRANS 2611 {} -41250.00 20240715 "Utgående moms 25%"
+#TRANS 1510 {} 206250.00 20240715 "Kundfordran"
+
+#VER "A" "3002" 20240801 "Löner juli"
+#TRANS 6000 {} 98000.00 20240801 "Löner"
+#TRANS 6200 {} 30870.00 20240801 "Sociala avgifter"
+#TRANS 2640 {} -31360.00 20240801 "Personalskatt"
+#TRANS 1910 {} -97510.00 20240801 "Utbetalning löner"
+
+#VER "A" "3003" 20240815 "Resor och representation"
+#TRANS 5800 {} 15000.00 20240815 "Resor"
+#TRANS 2611 {} 3750.00 20240815 "Ingående moms 25%"
+#TRANS 2440 {} -18750.00 20240815 "Leverantörsskuld"
+
+#VER "A" "3004" 20240901 "Försäljning Projekt Gamma Q3"
+#TRANS 3001 {3} -145000.00 20240901 "Konsulttjänster Projekt Gamma Q3"
+#TRANS 2611 {} -36250.00 20240901 "Utgående moms 25%"
+#TRANS 1510 {} 181250.00 20240901 "Kundfordran"
+
+# Transaktioner för 2024 - Kvartal 4
+#VER "A" "4001" 20241015 "Försäljning Projekt Alpha Q4"
+#TRANS 3001 {1} -195000.00 20241015 "Konsulttjänster Projekt Alpha Q4"
+#TRANS 2611 {} -48750.00 20241015 "Utgående moms 25%"
+#TRANS 1510 {} 243750.00 20241015 "Kundfordran"
+
+#VER "A" "4002" 20241101 "Löner oktober"
+#TRANS 6000 {} 105000.00 20241101 "Löner"
+#TRANS 6200 {} 33075.00 20241101 "Sociala avgifter"
+#TRANS 2640 {} -33600.00 20241101 "Personalskatt"
+#TRANS 1910 {} -104475.00 20241101 "Utbetalning löner"
+
+#VER "A" "4003" 20241115 "Ränteintäkter"
+#TRANS 7010 {} -5000.00 20241115 "Ränteintäkter bankkonto"
+#TRANS 1910 {} 5000.00 20241115 "Insättning ränta"
+
+#VER "A" "4004" 20241130 "Försäljning Projekt Beta Q4"
+#TRANS 3002 {2} -175000.00 20241130 "Konsulttjänster Projekt Beta Q4"
+#TRANS 2611 {} -43750.00 20241130 "Utgående moms 25%"
+#TRANS 1510 {} 218750.00 20241130 "Kundfordran"

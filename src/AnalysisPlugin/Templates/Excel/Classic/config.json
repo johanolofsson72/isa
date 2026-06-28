@@ -1,0 +1,70 @@
+{
+  "name": "Classic Excel Template",
+  "description": "Traditional classic style template for Excel reports with conservative colors",
+  "type": "excel",
+  "style": "classic",
+  "templateFile": "template.xlsx",
+  "colors": {
+    "primary": "#2c3e50",
+    "secondary": "#34495e",
+    "accent": "#e74c3c",
+    "background": "#ffffff",
+    "text": "#2c3e50",
+    "headerBackground": "#f8f9fa",
+    "borderColor": "#dee2e6"
+  },
+  "fonts": {
+    "heading": "Times New Roman",
+    "body": "Times New Roman",
+    "data": "Courier New",
+    "headingSize": 16,
+    "bodySize": 12,
+    "dataSize": 11
+  },
+  "layout": {
+    "margins": {
+      "top": 25,
+      "bottom": 25,
+      "left": 25,
+      "right": 25
+    },
+    "headerHeight": 70,
+    "footerHeight": 35,
+    "columnSpacing": 15,
+    "rowSpacing": 12
+  },
+  "components": [
+    {
+      "type": "header",
+      "position": {
+        "row": 1,
+        "column": 1,
+        "width": 8,
+        "height": 3
+      },
+      "style": {
+        "backgroundColor": "#f8f9fa",
+        "textColor": "#2c3e50",
+        "fontSize": 16,
+        "fontWeight": "bold",
+        "borderStyle": "solid"
+      }
+    },
+    {
+      "type": "table",
+      "position": {
+        "row": 5,
+        "column": 1,
+        "width": 8,
+        "height": 20
+      },
+      "style": {
+        "headerBackgroundColor": "#f8f9fa",
+        "headerTextColor": "#2c3e50",
+        "alternateRowColor": "#f8f9fa",
+        "borderColor": "#dee2e6",
+        "borderStyle": "solid"
+      }
+    }
+  ]
+}

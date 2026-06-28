@@ -1,0 +1,25 @@
+﻿@page "/fortnox-oauth"
+@using WebChat.Services
+@using Microsoft.AspNetCore.Components.Web.Infrastructure
+@inject IConfiguration Configuration
+@inject NavigationManager NavigationManager
+@inject WorkflowService WorkflowService
+@inject IJSRuntime JS
+
+<div style="padding: 20px; width: 500px;">
+    <h3>Koppla Fortnox till Accounting Agent</h3>
+    <button @onclick="StartOAuth">Börja!</button>
+</div>
+
+@code {
+    private void StartOAuth()
+    {
+        var clientId = Configuration["Fortnox:ClientId"];
+        var redirectUri = Configuration["Fortnox:RedirectUri"] ?? "";
+        var authEndpoint = Configuration["Fortnox:AuthEndpoint"];
+        var state = Guid.NewGuid().ToString(); // Optional: for CSRF protection
+
+        var url = $"{authEndpoint}?client_id={clientId}&redirect_uri={Uri.EscapeDataString(redirectUri)}&scope=invoice%20customer%20supplier%20supplierinvoice%20bookkeeping%20project&access_type=offline&response_type=code&state={state}";
+        NavigationManager.NavigateTo(url, forceLoad: true);
+    }
+}

@@ -1,0 +1,151 @@
+/* Workflows page visual harmonization with Scheduler cards (v3)
+   - Keep same card rhythm, actions, and metadata hierarchy as WorkflowScheduler
+   - Uses existing CSS variables from isa.css + theme.css
+*/
+
+/* Grid like scheduler (responsive columns) */
+@media (min-width: 768px) {
+  .workflows-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+    gap: 16px;
+    margin-top: 10px; /* 10px space before first workflow */
+  }
+}
+
+/* Card shell matching .card look & feel - same as history cards */
+.workflow-card {
+  border: 1px solid var(--border-color);
+  background: var(--card-bg);
+  border-radius: var(--border-radius);
+  padding: 0; /* match Bootstrap .card spacing pattern */
+  box-shadow: var(--card-shadow);
+  overflow: hidden;
+  min-height: 202px; /* Increased by 42px from default 160px (192px + 10px) */
+  transition: transform 0.2s, box-shadow 0.2s; /* Same transition as history cards */
+}
+
+/* Header like history cards - no blue background */
+.workflow-card .workflow-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background: transparent; /* Remove blue background */
+  color: var(--text-color); /* Use theme text color */
+  border-bottom: 1px solid var(--border-color); /* Add subtle separator */
+}
+.workflow-card .workflow-name {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+}
+.workflow-card .workflow-status.enabled { background: rgba(25,135,84,.2); color: #198754; padding: 4px 8px; border-radius: 999px; border: 1px solid rgba(25,135,84,.6); }
+.workflow-card .workflow-status.disabled { background: rgba(108,117,125,.2); color: #6c757d; padding: 4px 8px; border-radius: 999px; border: 1px solid rgba(108,117,125,.6); }
+
+/* Body like scheduler's .card-body */
+.workflow-card .workflow-description,
+.workflow-card .workflow-footer {
+  padding: 12px 16px;
+}
+.workflow-card .workflow-description { margin: 0; color: var(--text-secondary-color); }
+
+/* Footer metadata row */
+.workflow-card .workflow-footer { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+.workflow-card .workflow-type { display: inline-flex; align-items: center; gap: 8px; color: var(--text-secondary-color); }
+.workflow-card .workflow-meta { display: inline-flex; align-items: center; gap: 12px; color: var(--text-secondary-color); }
+.workflow-card .workflow-meta .badge { font-weight: 500; }
+
+/* Action buttons area mirrors scheduler small buttons */
+.workflow-card .workflow-actions { display: inline-flex; gap: 8px; }
+.workflow-card .btn.btn-sm { padding: .125rem .5rem; }
+
+/* Hover like history cards */
+.workflow-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15); /* Same as history cards */
+}
+
+/* Swipe area keeps working; ensure content area has proper structure */
+.swipeable-content { background: var(--card-bg); }
+
+/* Dark mode tune-up aligns with theme.css card vars */
+@media (prefers-color-scheme: dark) {
+  .workflow-card { border-color: var(--border-color); }
+}
+
+/* Make "Nytt arbetsflöde" button smaller */
+.workflows-container .page-header .btn {
+  padding: 6px 12px; /* Smaller padding than default */
+  font-size: 0.875rem; /* Smaller font size */
+}
+
+/* Swipe-to-delete functionality */
+.delete {
+  cursor: pointer;
+}
+
+.delete:hover {
+  background-color: #d32f2f;
+}
+
+.swipeable-action {
+  position: absolute;
+  top: 0;
+  right: 0;
+  height: 93%; /* Prevents going below card on workflow page */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--error-color);
+  color: white;
+  width: 80px;
+  z-index: 0;
+  font-size: 0.9rem;
+}
+
+/* Mobile specific fixes for workflows page */
+@media (max-width: 767px) {
+  .workflows-container {
+    padding: 12px 8px;
+    height: calc(100vh - 110px); /* Account for header + nav */
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+
+  .workflows-list {
+    padding-bottom: 20px; /* Extra space at bottom */
+    margin-top: 10px; /* 10px space before first workflow */
+  }
+
+  .workflow-card {
+    margin-bottom: 12px;
+  }
+
+  .workflow-card .workflow-header {
+    padding: 8px 12px;
+  }
+
+  .workflow-card .workflow-description,
+  .workflow-card .workflow-footer {
+    padding: 8px 12px;
+  }
+
+  /* Make all buttons much smaller on mobile */
+  .workflows-container .btn {
+    padding: 4px 8px !important; /* Much smaller padding */
+    font-size: 0.75rem !important; /* Smaller font size */
+    min-height: auto !important; /* Remove minimum height */
+  }
+
+  .workflows-container .btn-sm {
+    padding: 2px 6px !important; /* Even smaller for small buttons */
+    font-size: 0.7rem !important; /* Even smaller font */
+  }
+
+  .workflows-container .btn .bi {
+    font-size: 0.8rem !important; /* Smaller icons */
+  }
+}
+

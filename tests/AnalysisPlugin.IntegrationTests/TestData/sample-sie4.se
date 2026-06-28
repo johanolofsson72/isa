@@ -1,0 +1,169 @@
+#FLAGGA 0
+#PROGRAM "Fortnox" "4.0"
+#FORMAT PC8
+#GEN 20241106
+#SIETYP 4
+#PROSA "Test AB"
+#FNAMN "Test AB"
+#ORGNR 5566778899
+#BKOD "BAS2024"
+#ADRESS "Testgatan 1" "12345" "Stockholm" "08-123456"
+#FTYP AB
+#RAR 0 20240101 20241231
+#TAXAR 2024
+#OMFATTN 20240101 20241231
+#KPTYP BAS2024
+#KONTO 1010 "Utvecklingsutgifter"
+#KONTO 1020 "Koncessioner, patent, licenser, varumärken samt liknande rättigheter"
+#KONTO 1030 "Hyresrätter och liknande rättigheter"
+#KONTO 1040 "Goodwill"
+#KONTO 1050 "Förskott avseende immateriella anläggningstillgångar"
+#KONTO 1110 "Byggnader och mark"
+#KONTO 1120 "Maskiner och andra tekniska anläggningar"
+#KONTO 1130 "Inventarier, verktyg och installationer"
+#KONTO 1140 "Pågående nyanläggningar och förskott avseende materiella anläggningstillgångar"
+#KONTO 1210 "Andelar i koncernföretag"
+#KONTO 1220 "Fordringar hos koncernföretag"
+#KONTO 1230 "Andelar i intresseföretag"
+#KONTO 1240 "Fordringar hos intresseföretag"
+#KONTO 1250 "Andra långfristiga värdepappersinnehav"
+#KONTO 1260 "Andra långfristiga fordringar"
+#KONTO 1270 "Förutbetalda kostnader och upplupna intäkter"
+#KONTO 1310 "Råvaror och förnödenheter"
+#KONTO 1320 "Varor under tillverkning"
+#KONTO 1330 "Färdiga varor och handelsvaror"
+#KONTO 1340 "Pågående arbeten för annans räkning"
+#KONTO 1350 "Förskott till leverantörer"
+#KONTO 1410 "Kundfordringar"
+#KONTO 1420 "Fordringar hos koncernföretag"
+#KONTO 1430 "Fordringar hos intresseföretag"
+#KONTO 1440 "Övriga fordringar"
+#KONTO 1450 "Förutbetalda kostnader och upplupna intäkter"
+#KONTO 1510 "Kassa"
+#KONTO 1520 "Plusgiro"
+#KONTO 1530 "Checkräkningskonto"
+#KONTO 1540 "Övriga banktillgodohavanden"
+#KONTO 1910 "Aktiekapital"
+#KONTO 1920 "Uppskrivningsfond"
+#KONTO 1930 "Reservfond"
+#KONTO 1940 "Fond för utvecklingsutgifter"
+#KONTO 1950 "Balanserad vinst eller förlust"
+#KONTO 1960 "Årets resultat"
+#KONTO 2010 "Avsättningar för pensioner och liknande förpliktelser"
+#KONTO 2020 "Avsättningar för skatter"
+#KONTO 2030 "Andra avsättningar"
+#KONTO 2110 "Skulder till kreditinstitut"
+#KONTO 2120 "Skulder till koncernföretag"
+#KONTO 2130 "Skulder till intresseföretag"
+#KONTO 2140 "Övriga skulder"
+#KONTO 2210 "Förskott från kunder"
+#KONTO 2220 "Leverantörsskulder"
+#KONTO 2230 "Växelskulder"
+#KONTO 2240 "Skulder till koncernföretag"
+#KONTO 2250 "Skulder till intresseföretag"
+#KONTO 2260 "Övriga skulder"
+#KONTO 2270 "Upplupna kostnader och förutbetalda intäkter"
+#KONTO 3010 "Försäljning av varor"
+#KONTO 3020 "Försäljning av tjänster"
+#KONTO 3030 "Fakturerade kostnader"
+#KONTO 3040 "Öresutjämning"
+#KONTO 4010 "Inköp av varor"
+#KONTO 4020 "Inköp av material"
+#KONTO 4030 "Underentreprenader"
+#KONTO 4040 "Inköp av tjänster"
+#KONTO 5010 "Löner till arbetare"
+#KONTO 5020 "Löner till tjänstemän"
+#KONTO 5030 "Löner till verkställande direktör och vice verkställande direktör"
+#KONTO 5040 "Löner till styrelseledamöter, suppleanter och revisor"
+#KONTO 5410 "Sociala avgifter enligt lag och avtal"
+#KONTO 5420 "Pensionskostnader"
+#KONTO 5430 "Andra personalkostnader"
+#KONTO 6010 "Lokalhyror"
+#KONTO 6020 "Elektricitet för belysning"
+#KONTO 6030 "Uppvärmning"
+#KONTO 6040 "Vatten och avlopp"
+#KONTO 6050 "Bränsle för transportmedel"
+#KONTO 6060 "Övriga fastighetskostnader"
+#KONTO 6110 "Kontorsmaterial"
+#KONTO 6120 "Trycksaker"
+#KONTO 6130 "Litteratur och tidningar"
+#KONTO 6140 "Porto"
+#KONTO 6150 "Telekommunikation"
+#KONTO 6160 "Försäkringar"
+#KONTO 6170 "Övriga externa tjänster"
+#KONTO 6210 "Representation"
+#KONTO 6220 "Annonsering och reklam"
+#KONTO 6230 "Resor"
+#KONTO 6240 "Transportkostnader"
+#KONTO 6250 "Mässor och utställningar"
+#KONTO 6260 "Övriga försäljningskostnader"
+#KONTO 6310 "Revision"
+#KONTO 6320 "Andra externa tjänster inom administration"
+#KONTO 6330 "Bankkostnader"
+#KONTO 6340 "Fakturaavgifter"
+#KONTO 6350 "Juridiska tjänster"
+#KONTO 6360 "Konsultarvoden"
+#KONTO 6370 "Övriga externa kostnader"
+#KONTO 7010 "Avskrivningar på byggnader och mark"
+#KONTO 7020 "Avskrivningar på maskiner och andra tekniska anläggningar"
+#KONTO 7030 "Avskrivningar på inventarier, verktyg och installationer"
+#KONTO 7040 "Nedskrivningar av immateriella och materiella anläggningstillgångar"
+#KONTO 8010 "Ränteintäkter från koncernföretag"
+#KONTO 8020 "Ränteintäkter från intresseföretag"
+#KONTO 8030 "Övriga ränteintäkter och liknande resultatposter"
+#KONTO 8040 "Räntekostnader till koncernföretag"
+#KONTO 8050 "Räntekostnader till intresseföretag"
+#KONTO 8060 "Övriga räntekostnader och liknande resultatposter"
+#KONTO 8310 "Extraordinära intäkter"
+#KONTO 8320 "Extraordinära kostnader"
+#KONTO 8410 "Bokslutsdispositioner"
+#KONTO 8510 "Skatt på årets resultat"
+#KONTO 8520 "Uppskjuten skatt"
+#VER A 1 20240115 "Ingående balans"
+{
+#TRANS 1910 {} 500000.00
+#TRANS 1950 {} 250000.00
+#TRANS 1530 {} 750000.00
+}
+#VER A 2 20240201 "Försäljning faktura 1001"
+{
+#TRANS 1410 {} 125000.00
+#TRANS 3010 {} -100000.00
+#TRANS 2610 {} -25000.00
+}
+#VER A 3 20240201 "Inköp material"
+{
+#TRANS 4010 {} 45000.00
+#TRANS 2220 {} -45000.00
+}
+#VER A 4 20240215 "Löner januari"
+{
+#TRANS 5020 {} 85000.00
+#TRANS 5410 {} 26775.00
+#TRANS 2710 {} -85000.00
+#TRANS 2730 {} -26775.00
+}
+#VER A 5 20240228 "Hyra februari"
+{
+#TRANS 6010 {} 25000.00
+#TRANS 2220 {} -25000.00
+}
+#VER A 6 20240301 "Försäljning faktura 1002"
+{
+#TRANS 1410 {} 87500.00
+#TRANS 3010 {} -70000.00
+#TRANS 2610 {} -17500.00
+}
+#VER A 7 20240315 "Löner februari"
+{
+#TRANS 5020 {} 85000.00
+#TRANS 5410 {} 26775.00
+#TRANS 2710 {} -85000.00
+#TRANS 2730 {} -26775.00
+}
+#VER A 8 20240331 "Kvartalsbokslut Q1"
+{
+#TRANS 6160 {} 12000.00
+#TRANS 6330 {} 2500.00
+#TRANS 2220 {} -14500.00
+}

@@ -1,0 +1,16 @@
+/* Overrides for Workflows page cards (v2) */
+
+/* Ensure each workflow card has a minimum height */
+.workflow-card {
+  min-height: 160px;
+}
+
+/* On desktop/tablet, make responsive grid columns */
+@media (min-width: 768px) {
+  .workflows-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+    gap: 16px;
+  }
+}
+

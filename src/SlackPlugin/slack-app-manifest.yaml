@@ -1,0 +1,40 @@
+display_information:
+  name: AccountingAgent
+  description: AI-powered accounting assistant for Slack
+  background_color: "#2c3e50"
+  long_description: AccountingAgent is an AI-powered assistant that helps with accounting tasks, financial reporting, and business automation through Slack.
+
+features:
+  bot_user:
+    display_name: AccountingAgent
+    always_online: true
+
+oauth_config:
+  scopes:
+    bot:
+      - chat:write
+      - chat:write.public
+      - users:read
+      - users:read.email
+      - channels:read
+      - groups:read
+      - im:read
+      - im:write
+      - im:history
+      - mpim:read
+      - mpim:write
+      - conversations.open
+
+settings:
+  event_subscriptions:
+    bot_events:
+      - message.channels
+      - message.groups
+      - message.im
+      - message.mpim
+      - app_mention
+  interactivity:
+    is_enabled: false
+  org_deploy_enabled: false
+  socket_mode_enabled: false
+  token_rotation_enabled: false

@@ -1,0 +1,777 @@
+@page "/settings"
+@using Microsoft.Extensions.Configuration
+@using System.IO
+@using System.Text
+@using System.Text.Json
+@using System.Text.Json.Nodes
+@using Microsoft.JSInterop
+@using System.Net.Http
+@inject IConfiguration Configuration
+@inject IJSRuntime JS
+@inject NavigationManager Navigation
+
+<PageTitle>Inställningar - Isa</PageTitle>
+
+<div class="settings-container">
+    <div class="page-header">
+        <h1><span class="bi bi-gear-fill"></span> Inställningar</h1>
+        <button class="btn btn-outline-secondary" @onclick="LoadSettings" disabled="@isLoading">
+            <span class="bi bi-arrow-clockwise @(isLoading ? "spin" : "")"></span>
+            @(isLoading ? "Laddar..." : "Uppdatera")
+        </button>
+    </div>
+
+    <div class="settings-navigation">
+        <div class="nav-tabs">
+            <button class="nav-tab @(activeTab == "systemprompt" ? "active" : "")" 
+                    @onclick='() => SetActiveTab("systemprompt")'>
+                <span class="bi bi-chat-square-text-fill"></span>
+                <span>Systemuppmaning</span>
+            </button>
+            <button class="nav-tab @(activeTab == "appsettings" ? "active" : "")" 
+                    @onclick='() => SetActiveTab("appsettings")'>
+                <span class="bi bi-sliders"></span>
+                <span>Konfiguration</span>
+            </button>
+            <button class="nav-tab @(activeTab == "help" ? "active" : "")" 
+                    @onclick='() => SetActiveTab("help")'>
+                <span class="bi bi-question-circle-fill"></span>
+                <span>Dokumentation</span>
+            </button>
+        </div>
+    </div>
+
+    <div class="settings-content">
+        @if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <div class="alert alert-danger">
+                <span class="bi bi-exclamation-triangle-fill"></span>
+                <span>@errorMessage</span>
+                <button class="btn btn-sm btn-outline-light ms-2" @onclick="() => errorMessage = null">
+                    <span class="bi bi-x"></span>
+                </button>
+            </div>
+        }
+
+        @if (!string.IsNullOrEmpty(successMessage))
+        {
+            <div class="alert alert-success">
+                <span class="bi bi-check-circle-fill"></span>
+                <span>@successMessage</span>
+                <button class="btn btn-sm btn-outline-light ms-2" @onclick="() => successMessage = null">
+                    <span class="bi bi-x"></span>
+                </button>
+            </div>
+        }
+
+        @if (activeTab == "systemprompt")
+        {
+            <div class="settings-section">
+                <div class="section-header">
+                    <h2><span class="bi bi-robot"></span> Systemuppmaning</h2>
+                    <p class="section-description">
+                        Definiera hur AI-agenten beter sig och svarar. Denna uppmaning anger personlighet, förmågor och riktlinjer för assistenten.
+                    </p>
+                </div>
+
+                <div class="editor-container">
+                    <div class="editor-toolbar">
+                        <button class="btn btn-sm btn-outline-secondary" @onclick="ResetSystemPrompt" disabled="@isSaving">
+                            <span class="bi bi-arrow-counterclockwise"></span> Återställ till standard
+                        </button>
+                        <div class="toolbar-spacer"></div>
+                        <span class="char-count">@(systemPrompt?.Length ?? 0) tecken</span>
+                    </div>
+                    
+                    <textarea @bind="systemPrompt" 
+                              class="settings-editor" 
+                              placeholder="Ange instruktioner för systemuppmaningen..."
+                              rows="20"
+                              disabled="@isSaving"></textarea>
+                    
+                    <div class="editor-actions">
+                        <button class="btn btn-primary btn-lg" @onclick="SaveSystemPrompt" disabled="@(isSaving || string.IsNullOrWhiteSpace(systemPrompt))">
+                            @if (isSaving)
+                            {
+                                <span class="bi bi-gear-fill spin"></span> <text>Sparar...</text>
+                            }
+                            else
+                            {
+                                <span class="bi bi-check-lg"></span> <text>Spara systemuppmaning</text>
+                            }
+                        </button>
+                    </div>
+                </div>
+            </div>
+        }
+        else if (activeTab == "appsettings")
+        {
+            <div class="settings-section">
+                <div class="section-header">
+                    <h2><span class="bi bi-sliders"></span> Programkonfiguration</h2>
+                    <p class="section-description">
+                        Konfigurera programinställningar för olika plugins och tjänster. Ändringar kräver omstart av programmet för att träda i kraft.
+                    </p>
+                </div>
+
+                <div class="config-groups">
+                    @if (configGroups != null)
+                    {
+                        @foreach (var group in configGroups)
+                        {
+                            <div class="config-group">
+                                <div class="config-group-header" @onclick="() => ToggleGroup(group.Key)">
+                                    <h3>
+                                        <span class="bi @GetGroupIcon(group.Key)"></span>
+                                        @FormatGroupName(group.Key)
+                                    </h3>
+                                    <span class="bi @(expandedGroups.Contains(group.Key) ? "bi-chevron-up" : "bi-chevron-down")"></span>
+                                </div>
+                                
+                                @if (expandedGroups.Contains(group.Key))
+                                {
+                                    <div class="config-group-content">
+                                        @foreach (var setting in group.Value)
+                                        {
+                                            <div class="config-setting">
+                                                <label class="config-label">
+                                                    @setting.Key
+                                                    @if (!string.IsNullOrEmpty(GetSettingDescription(group.Key, setting.Key)))
+                                                    {
+                                                        <span class="config-description">@GetSettingDescription(group.Key, setting.Key)</span>
+                                                    }
+                                                </label>
+                                                @if (IsPasswordField(group.Key, setting.Key))
+                                                {
+                                                    <input type="password" class="form-control" 
+                                                           value="@setting.Value" 
+                                                           @onchange="(e) => UpdateSettingValue(group.Key, setting.Key, e.Value?.ToString() ?? string.Empty)" 
+                                                           placeholder="Ange värde..." />
+                                                }
+                                                else if (IsLargeTextField(group.Key, setting.Key))
+                                                {
+                                                    <textarea class="form-control" rows="3" 
+                                                              value="@setting.Value" 
+                                                              @onchange="(e) => UpdateSettingValue(group.Key, setting.Key, e.Value?.ToString() ?? string.Empty)" 
+                                                              placeholder="Ange värde..."></textarea>
+                                                }
+                                                else
+                                                {
+                                                    <input type="text" class="form-control" 
+                                                           value="@setting.Value" 
+                                                           @onchange="(e) => UpdateSettingValue(group.Key, setting.Key, e.Value?.ToString() ?? string.Empty)" 
+                                                           placeholder="Ange värde..." />
+                                                }
+                                            </div>
+                                        }
+                                    </div>
+                                }
+                            </div>
+                        }
+                    }
+                </div>
+
+                <div class="editor-actions">
+                    <button class="btn btn-outline-secondary" @onclick="ResetAppSettings" disabled="@isSaving">
+                        <span class="bi bi-arrow-counterclockwise"></span> Återställ till standard
+                    </button>
+                    <button class="btn btn-primary btn-lg" @onclick="SaveAppSettings" disabled="@isSaving">
+                        @if (isSaving)
+                        {
+                            <span class="bi bi-gear-fill spin"></span> <text>Sparar...</text>
+                        }
+                        else
+                        {
+                            <span class="bi bi-check-lg"></span> <text>Spara konfiguration</text>
+                        }
+                    </button>
+                </div>
+            </div>
+        }
+        else if (activeTab == "help")
+        {
+            <div class="settings-section">
+                <div class="section-header">
+                    <h2><span class="bi bi-book"></span> Dokumentation och hjälp</h2>
+                    <p class="section-description">
+                        Lär dig hur du installerar och konfigurerar Isa för optimal prestanda.
+                    </p>
+                </div>
+
+                <div class="help-cards">
+                    <div class="help-card">
+                        <div class="help-card-header">
+                            <span class="bi bi-play-circle-fill"></span>
+                            <h3>Getting Started</h3>
+                        </div>
+                        <div class="help-card-content">
+                            <p>Isa är en kraftfull AI-assistent som kan hjälpa med olika uppgifter:</p>
+                            <ul>
+                                <li>Chatting with AI for information and assistance</li>
+                                <li>Creating and running automated workflows</li>
+                                <li>Managing email, chat, and communications</li>
+                                <li>Organizing files across various cloud services</li>
+                            </ul>
+                            <a href="/docs/IsaGuide" class="btn btn-primary" target="_blank">
+                                <span class="bi bi-book"></span> View Complete Documentation
+                            </a>
+                        </div>
+                    </div>
+
+                    <div class="help-card">
+                        <div class="help-card-header">
+                            <span class="bi bi-plug-fill"></span>
+                            <h3>Plugin Configuration</h3>
+                        </div>
+                        <div class="help-card-content">
+                            <p>Isa använder olika plugins för att ansluta till externa tjänster:</p>
+                            
+                            <h4>Email Plugins</h4>
+                            <ul>
+                                <li>SMTP and IMAP credentials</li>
+                                <li>API keys for services like Mailjet</li>
+                            </ul>
+                            
+                            <h4>Cloud Storage Plugins</h4>
+                            <ul>
+                                <li>OAuth credentials for Google Drive, Dropbox, OneDrive</li>
+                                <li>Appropriate permissions for file access</li>
+                            </ul>
+                            
+                            <h4>Communication Plugins</h4>
+                            <ul>
+                                <li>Webhook URLs for Teams and Slack</li>
+                                <li>API keys for SMS services</li>
+                            </ul>
+                            
+                            <a href="/docs/PluginConfiguration" class="btn btn-primary" target="_blank">
+                                <span class="bi bi-plug"></span> Plugin Setup Guide
+                            </a>
+                        </div>
+                    </div>
+
+                    <div class="help-card">
+                        <div class="help-card-header">
+                            <span class="bi bi-shield-check-fill"></span>
+                            <h3>Security & Privacy</h3>
+                        </div>
+                        <div class="help-card-content">
+                            <p>Important security considerations:</p>
+                            <ul>
+                                <li>All credentials are stored securely</li>
+                                <li>Communications are encrypted</li>
+                                <li>Data is processed locally when possible</li>
+                                <li>Regular security updates recommended</li>
+                            </ul>
+                            <a href="/docs/security" class="btn btn-primary">
+                                <span class="bi bi-shield"></span> Security Guide
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    private string activeTab = "systemprompt";
+    private string systemPrompt = string.Empty;
+    private string appSettings = string.Empty;
+    private bool isLoading = true;
+    private bool isSaving = false;
+    private string? errorMessage;
+    private string? successMessage;
+    
+    // For grouped configuration editing
+    private Dictionary<string, Dictionary<string, string>> configGroups = new();
+    private HashSet<string> expandedGroups = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadSettings();
+    }
+
+    private void SetActiveTab(string tab)
+    {
+        activeTab = tab;
+        ClearMessages();
+    }
+
+    private void ClearMessages()
+    {
+        errorMessage = null;
+        successMessage = null;
+    }
+
+    private void UpdateSettingValue(string groupKey, string settingKey, string newValue)
+    {
+        if (configGroups.ContainsKey(groupKey) && configGroups[groupKey].ContainsKey(settingKey))
+        {
+            configGroups[groupKey][settingKey] = newValue;
+        }
+    }
+
+    private async Task LoadSettings()
+    {
+        isLoading = true;
+        ClearMessages();
+
+        try
+        {
+            await LoadSystemPrompt();
+            await LoadAppSettings();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Fel vid laddning av inställningar: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task LoadSystemPrompt()
+    {
+        try
+        {
+            // Try to load from API first
+            try
+            {
+                var httpClient = new HttpClient();
+                httpClient.BaseAddress = new Uri("https://localhost:7136/");
+                var response = await httpClient.GetAsync("/api/settings/systemprompt");
+                
+                if (response.IsSuccessStatusCode)
+                {
+                    systemPrompt = await response.Content.ReadAsStringAsync();
+                    return;
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error loading system prompt from API: {ex.Message}");
+            }
+
+            // Fall back to file system
+            try
+            {
+                var baseDir = AppDomain.CurrentDomain.BaseDirectory;
+                var systemPromptPath = Path.Combine(
+                    Directory.GetParent(baseDir)?.Parent?.Parent?.Parent?.Parent?.FullName ?? string.Empty,
+                    "src",
+                    "Agent",
+                    "systemprompt.txt"
+                );
+                
+                if (File.Exists(systemPromptPath))
+                {
+                    systemPrompt = await File.ReadAllTextAsync(systemPromptPath);
+                }
+                else
+                {
+                    systemPrompt = GetDefaultSystemPrompt();
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error loading system prompt from file: {ex.Message}");
+                systemPrompt = GetDefaultSystemPrompt();
+            }
+        }
+        catch (Exception ex)
+        {
+            systemPrompt = GetDefaultSystemPrompt();
+            Console.WriteLine($"Error loading system prompt: {ex.Message}");
+        }
+    }
+
+    private async Task LoadAppSettings()
+    {
+        try
+        {
+            // Try to load from API first
+            try
+            {
+                var httpClient = new HttpClient();
+                httpClient.BaseAddress = new Uri("https://localhost:7136/");
+                var response = await httpClient.GetAsync("/api/settings/appsettings");
+                
+                if (response.IsSuccessStatusCode)
+                {
+                    appSettings = await response.Content.ReadAsStringAsync();
+                    ParseAppSettingsForGroupEdit();
+                    return;
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error loading app settings from API: {ex.Message}");
+            }
+
+            // Fall back to file system
+            try
+            {
+                var baseDir = AppDomain.CurrentDomain.BaseDirectory;
+                var appSettingsPath = Path.Combine(
+                    Directory.GetParent(baseDir)?.Parent?.Parent?.Parent?.Parent?.FullName ?? string.Empty,
+                    "src",
+                    "Agent",
+                    "appsettings.json"
+                );
+                
+                if (File.Exists(appSettingsPath))
+                {
+                    appSettings = await File.ReadAllTextAsync(appSettingsPath);
+                }
+                else
+                {
+                    appSettings = GetDefaultAppSettings();
+                }
+                
+                ParseAppSettingsForGroupEdit();
+            }
+            catch (Exception ex)
+            {
+                appSettings = GetDefaultAppSettings();
+                ParseAppSettingsForGroupEdit();
+                Console.WriteLine($"Error loading app settings: {ex.Message}");
+            }
+        }
+        catch (Exception ex)
+        {
+            appSettings = GetDefaultAppSettings();
+            ParseAppSettingsForGroupEdit();
+            Console.WriteLine($"Error loading app settings: {ex.Message}");
+        }
+    }
+
+    private void ParseAppSettingsForGroupEdit()
+    {
+        try
+        {
+            using var doc = JsonDocument.Parse(appSettings);
+            configGroups.Clear();
+            
+            foreach (var property in doc.RootElement.EnumerateObject())
+            {
+                var groupName = property.Name;
+                var groupSettings = new Dictionary<string, string>();
+                
+                if (property.Value.ValueKind == JsonValueKind.Object)
+                {
+                    foreach (var setting in property.Value.EnumerateObject())
+                    {
+                        groupSettings[setting.Name] = setting.Value.GetString() ?? "";
+                    }
+                }
+                else
+                {
+                    groupSettings[groupName] = property.Value.GetString() ?? "";
+                }
+                
+                configGroups[groupName] = groupSettings;
+            }
+            
+            // Expand all groups by default
+            expandedGroups = configGroups.Keys.ToHashSet();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error parsing app settings: {ex.Message}");
+            configGroups.Clear();
+        }
+    }
+
+    private async Task SaveSystemPrompt()
+    {
+        if (string.IsNullOrWhiteSpace(systemPrompt))
+        {
+            errorMessage = "Systemuppmaning kan inte vara tom";
+            return;
+        }
+
+        isSaving = true;
+        ClearMessages();
+
+        try
+        {
+            // Try to save to API first
+            try
+            {
+                var httpClient = new HttpClient();
+                httpClient.BaseAddress = new Uri("https://localhost:7136/");
+                
+                var content = new StringContent(systemPrompt, Encoding.UTF8);
+                content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("text/plain");
+                var response = await httpClient.PutAsync("/api/settings/systemprompt", content);
+                
+                if (response.IsSuccessStatusCode)
+                {
+                    successMessage = "System prompt saved successfully!";
+                    return;
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error saving system prompt to API: {ex.Message}");
+            }
+
+            // Fall back to saving to file
+            try
+            {
+                var baseDir = AppDomain.CurrentDomain.BaseDirectory;
+                var systemPromptPath = Path.Combine(
+                    Directory.GetParent(baseDir)?.Parent?.Parent?.Parent?.Parent?.FullName ?? string.Empty,
+                    "src",
+                    "Agent",
+                    "systemprompt.txt"
+                );
+                
+                await File.WriteAllTextAsync(systemPromptPath, systemPrompt);
+                successMessage = "System prompt saved successfully to file!";
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Failed to save system prompt to file: {ex.Message}");
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Fel vid sparande av systemuppmaning: {ex.Message}";
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+    private async Task SaveAppSettings()
+    {
+        isSaving = true;
+        ClearMessages();
+
+        try
+        {
+            // Rebuild JSON from groups
+            var settingsObject = new Dictionary<string, object>();
+            
+            foreach (var group in configGroups)
+            {
+                if (group.Value.Count == 1 && group.Value.Keys.First() == group.Key)
+                {
+                    // Single value setting
+                    settingsObject[group.Key] = group.Value.Values.First();
+                }
+                else
+                {
+                    // Object setting
+                    settingsObject[group.Key] = group.Value;
+                }
+            }
+            
+            var newAppSettings = JsonSerializer.Serialize(settingsObject, new JsonSerializerOptions { WriteIndented = true });
+            
+            // Validate JSON
+            using var doc = JsonDocument.Parse(newAppSettings);
+            appSettings = newAppSettings;
+            
+            // Try to save to API first
+            try
+            {
+                var httpClient = new HttpClient();
+                httpClient.BaseAddress = new Uri("https://localhost:7136/");
+                
+                var content = new StringContent(appSettings, Encoding.UTF8);
+                content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/json");
+                var response = await httpClient.PutAsync("/api/settings/appsettings", content);
+                
+                if (response.IsSuccessStatusCode)
+                {
+                    successMessage = "Configuration saved successfully!";
+                    return;
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error saving app settings to API: {ex.Message}");
+            }
+
+            // Fall back to saving to file
+            try
+            {
+                var baseDir = AppDomain.CurrentDomain.BaseDirectory;
+                var appSettingsPath = Path.Combine(
+                    Directory.GetParent(baseDir)?.Parent?.Parent?.Parent?.Parent?.FullName ?? string.Empty,
+                    "src",
+                    "Agent",
+                    "appsettings.json"
+                );
+                
+                await File.WriteAllTextAsync(appSettingsPath, appSettings);
+                successMessage = "Configuration saved successfully to file!";
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Failed to save app settings to file: {ex.Message}");
+            }
+        }
+        catch (JsonException)
+        {
+            errorMessage = "Ogiltigt konfigurationsformat. Kontrollera dina värden.";
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Fel vid sparande av konfiguration: {ex.Message}";
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+    private void ResetSystemPrompt()
+    {
+        systemPrompt = GetDefaultSystemPrompt();
+        ClearMessages();
+    }
+
+    private void ResetAppSettings()
+    {
+        appSettings = GetDefaultAppSettings();
+        ParseAppSettingsForGroupEdit();
+        ClearMessages();
+    }
+
+    private void ToggleGroup(string groupName)
+    {
+        if (expandedGroups.Contains(groupName))
+        {
+            expandedGroups.Remove(groupName);
+        }
+        else
+        {
+            expandedGroups.Add(groupName);
+        }
+    }
+
+    private string GetGroupIcon(string groupName)
+    {
+        return groupName.ToLower() switch
+        {
+            "mailplugin" => "bi-envelope-fill",
+            "twilioplugin" => "bi-phone-fill",
+            "teamsplugin" => "bi-microsoft-teams",
+            "slackplugin" => "bi-slack",
+            "whatsappplugin" => "bi-whatsapp",
+            "googledriveplugin" => "bi-google",
+            "onedriveplugin" => "bi-microsoft",
+            "dropboxplugin" => "bi-dropbox",
+            "workflowsettings" => "bi-diagram-3-fill",
+            "logging" => "bi-file-text-fill",
+            _ => "bi-gear-fill"
+        };
+    }
+
+    private string FormatGroupName(string groupName)
+    {
+        return groupName switch
+        {
+            "MailPlugin" => "Mail Configuration",
+            "TwilioPlugin" => "SMS (Twilio)",
+            "TeamsPlugin" => "Microsoft Teams",
+            "SlackPlugin" => "Slack",
+            "WhatsAppPlugin" => "WhatsApp",
+            "GoogleDrivePlugin" => "Google Drive",
+            "OneDrivePlugin" => "OneDrive",
+            "DropboxPlugin" => "Dropbox",
+            "WorkflowSettings" => "Workflows",
+            "Logging" => "Logging",
+            _ => groupName
+        };
+    }
+
+    private string GetSettingDescription(string groupName, string settingName)
+    {
+        var key = $"{groupName}.{settingName}";
+        return key switch
+        {
+            "MailPlugin.ApiKey" => "Mailjet API Key for sending emails",
+            "MailPlugin.ApiSecret" => "Mailjet API Secret for authentication",
+            "MailPlugin.FromEmail" => "Default sender email address",
+            "MailPlugin.FromName" => "Default sender name",
+            "TwilioPlugin.AccountSid" => "Twilio Account SID for SMS",
+            "TwilioPlugin.AuthToken" => "Twilio Authentication Token",
+            "TwilioPlugin.FromNumber" => "Twilio phone number to send from",
+            "TeamsPlugin.WebhookUrl" => "Microsoft Teams webhook URL",
+            "SlackPlugin.Token" => "Slack Bot Token",
+            "SlackPlugin.Channel" => "Default Slack channel",
+            "WorkflowSettings.WorkflowsPath" => "Path to workflow files directory",
+            _ => ""
+        };
+    }
+
+    private bool IsPasswordField(string groupName, string settingName)
+    {
+        var key = $"{groupName}.{settingName}";
+        return key.Contains("Secret") || key.Contains("Token") || key.Contains("Password") || key.Contains("ApiKey");
+    }
+
+    private bool IsLargeTextField(string groupName, string settingName)
+    {
+        var key = $"{groupName}.{settingName}";
+        return key.Contains("Url") || key.Contains("Path") || settingName.Length > 50;
+    }
+
+    private string GetDefaultSystemPrompt()
+    {
+        return @"You are a helpful personal assistant with ability to perform various tasks by calling available functions.
+
+IMPORTANT INSTRUCTIONS FOR TOOL USAGE:
+- For sending emails: Use ONLY MailPlugin (not other tools)
+- For reading emails: Use ONLY MailReader with the exact server settings below
+- For sending SMS: Use ONLY TwilioPlugin (not 46elks or other tools)
+- For sending WhatsApp messages: Use ONLY WhatsAppPlugin
+- For sending Teams messages: Use ONLY TeamsPlugin
+- For sending Slack messages: Use ONLY SlackPlugin
+
+IMPORTANT CONFIGURATION INFORMATION:
+1. Email account: agent@example.com
+2. Email password: YOUR_EMAIL_PASSWORD
+3. IMAP server: mail.example.com
+4. IMAP port: 993 (with SSL) or 143 (without SSL)
+5. POP3 server: mail.example.com
+6. POP3 port: 995 (with SSL) or 110 (without SSL)
+7. Contact person: Anna (demo@example.com)
+8. Anna's mobile number for SMS via Twilio: +46709161669";
+    }
+
+    private string GetDefaultAppSettings()
+    {
+        return JsonSerializer.Serialize(new
+        {
+            MailPlugin = new
+            {
+                ApiKey = "your-mailjet-api-key",
+                ApiSecret = "your-mailjet-api-secret",
+                FromEmail = "agent@example.com",
+                FromName = "Isa"
+            },
+            TwilioPlugin = new
+            {
+                AccountSid = "your-twilio-account-sid",
+                AuthToken = "your-twilio-auth-token",
+                FromNumber = "+1234567890"
+            },
+            TeamsPlugin = new
+            {
+                WebhookUrl = "https://your-teams-webhook-url"
+            },
+            WorkflowSettings = new
+            {
+                WorkflowsPath = "/path/to/accountingagent/src/Agent/Workflows/"
+            }
+        }, new JsonSerializerOptions { WriteIndented = true });
+    }
+}

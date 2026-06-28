@@ -1,0 +1,155 @@
+.login-container {
+    min-height: 100vh;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    position: relative;
+}
+
+/* Theme toggle positioning on login page */
+.login-theme-toggle {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1000;
+}
+
+/* Style the theme toggle button on login page */
+.login-theme-toggle .theme-toggle-btn {
+    background: rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    color: white;
+    backdrop-filter: blur(10px);
+    border-radius: 50px;
+    padding: 12px 20px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.3s ease;
+}
+
+.login-theme-toggle .theme-toggle-btn:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: translateY(-2px);
+}
+
+.login-card {
+    background: white;
+    border-radius: 15px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+    padding: 40px;
+    width: 100%;
+    max-width: 400px;
+    animation: slideUp 0.5s ease-out;
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.login-header {
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+.login-header h2 {
+    color: #333;
+    margin-bottom: 10px;
+}
+
+.login-header i {
+    color: #667eea;
+    margin-right: 10px;
+}
+
+.login-btn-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: none;
+    padding: 12px;
+    font-weight: 600;
+}
+
+.login-btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+}
+
+.login-input-group-text {
+    background: #f8f9fa;
+    border-right: none;
+}
+
+.login-form-control {
+    border-left: none;
+}
+
+.login-form-control:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+}
+
+/* Logout navigation styling */
+.logout-nav {
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.logout-nav:hover {
+    background-color: rgba(220, 53, 69, 0.1);
+    color: #dc3545;
+}
+
+.logout-nav:hover .nav-icon {
+    color: #dc3545;
+}
+
+/* Dark mode support for login page */
+.dark-theme .login-card {
+    background: #343a40; /* Dark card background */
+    color: #f8f9fa; /* Light text */
+}
+
+.dark-theme .login-header h2 {
+    color: #f8f9fa; /* Light text for header */
+}
+
+.dark-theme .form-label {
+    color: #f8f9fa !important; /* Light text for labels */
+}
+
+.dark-theme .text-muted {
+    color: #adb5bd !important; /* Muted text in dark mode */
+}
+
+.dark-theme .login-input-group-text {
+    background: #495057; /* Dark input group background */
+    border-color: #6c757d; /* Dark border */
+    color: #f8f9fa; /* Light text */
+}
+
+.dark-theme .login-form-control {
+    background: #495057; /* Dark input background */
+    border-color: #6c757d; /* Dark border */
+    color: #f8f9fa; /* Light text */
+}
+
+.dark-theme .login-form-control::placeholder {
+    color: #adb5bd; /* Muted placeholder text */
+}
+
+.dark-theme .login-form-control:focus {
+    background: #495057; /* Keep dark background on focus */
+    border-color: #0d6efd; /* Blue focus border */
+    color: #f8f9fa; /* Light text */
+    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25); /* Blue focus shadow */
+}

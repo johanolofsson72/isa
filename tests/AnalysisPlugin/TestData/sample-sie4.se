@@ -1,0 +1,48 @@
+#FLAGGA 0
+#PROGRAM "Test SIE4 Generator" "1.0"
+#FORMAT PC8
+#GEN 20241105
+#SIETYP 4
+#PROSA "Test Company AB"
+#FNAMN "Test Company AB"
+#ORGNR 5566778899
+#BKOD SNI
+#ADRESS "Test Street 123" "12345 Stockholm" "08-123456"
+#FTYP AB
+#KPTYP BAS2019
+#VALUTA SEK
+#TAXAR 2024
+#OMFATTN 20240101 20241231
+#KONTO 1510 "Kundfordringar"
+#KONTO 1930 "Kassa"
+#KONTO 3010 "Försäljning varor"
+#KONTO 4010 "Inköp varor"
+#KONTO 6110 "Kontorsmaterial"
+#KONTO 7010 "Hyra lokaler"
+#OBJEKT 1 "Projekt" "P001" "Projekt Alpha"
+#OBJEKT 1 "Projekt" "P002" "Projekt Beta"
+#VER A 1 20240115 "Försäljning Projekt Alpha"
+{
+#TRANS 1510 {} 12000.00 20240115 "Faktura 001" {} 1 "P001"
+#TRANS 3010 {} -12000.00 20240115 "Försäljning" {} 1 "P001"
+}
+#VER A 2 20240120 "Inköp material"
+{
+#TRANS 4010 {} 5000.00 20240120 "Inköp varor" {} 1 "P001"
+#TRANS 1930 {} -5000.00 20240120 "Betalning" {}
+}
+#VER A 3 20240125 "Försäljning Projekt Beta"
+{
+#TRANS 1510 {} 8000.00 20240125 "Faktura 002" {} 1 "P002"
+#TRANS 3010 {} -8000.00 20240125 "Försäljning" {} 1 "P002"
+}
+#VER A 4 20240130 "Kontorsmaterial"
+{
+#TRANS 6110 {} 1500.00 20240130 "Kontorsmaterial" {}
+#TRANS 1930 {} -1500.00 20240130 "Betalning" {}
+}
+#VER A 5 20240205 "Hyra"
+{
+#TRANS 7010 {} 15000.00 20240205 "Hyra februari" {}
+#TRANS 1930 {} -15000.00 20240205 "Betalning" {}
+}

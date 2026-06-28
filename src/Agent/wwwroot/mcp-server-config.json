@@ -1,0 +1,19 @@
+{
+  "mcpServers": {
+    "isa-accounting-agent": {
+      "transport": {
+        "type": "http",
+        "url": "https://localhost:7042/mcp"
+      },
+      "capabilities": {
+        "tools": true,
+        "resources": true,
+        "prompts": true,
+        "logging": true,
+        "streaming": true
+      },
+      "description": "ISA Accounting Agent MCP Server",
+      "version": "1.0.0"
+    }
+  }
+}

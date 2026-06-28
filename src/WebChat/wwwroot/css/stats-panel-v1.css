@@ -1,0 +1,19 @@
+/* Stats Panel (v2) - cache-busting filename with new plugin stats */
+.stats-panel{position:fixed;top:76px;right:0;width:320px;max-width:70vw;background:var(--card-bg);color:var(--text-color);border-left:1px solid var(--border-color);box-shadow:var(--card-shadow);z-index:1040;transition:transform .2s ease}
+.stats-panel.collapsed{transform:translateX(280px)}
+.stats-header{display:flex;gap:.5rem;align-items:center;padding:.5rem .75rem;border-bottom:1px solid var(--border-color);cursor:pointer;background:var(--bg-secondary-color)}
+.stats-body{display:flex;flex-direction:column;gap:.25rem;padding:.5rem .75rem}
+.stat-row{display:flex;justify-content:space-between;gap:.5rem;font-size:.85rem}
+.stat-section{margin-top:.5rem;padding-top:.5rem;border-top:1px solid var(--border-color)}
+.stat-header-small{font-size:.75rem;font-weight:600;color:var(--text-secondary-color);margin-bottom:.25rem;text-transform:uppercase;letter-spacing:.5px}
+.plugin-stat{font-size:.8rem;color:var(--text-secondary-color)}
+.plugin-stat span:first-child{font-weight:500}
+@media(max-width:991px){.stats-panel{display:none}}
+/* Mobile override when explicitly opened */
+.stats-panel.mobile-open{display:block !important;left:0;right:0;top:auto;bottom:0;width:100%;max-width:none;height:55vh;border-left:none;border-top:1px solid var(--border-color);transform:none}
+/* Dark theme inherits CSS variables */
+
+.dark-theme .stats-panel{background:var(--card-bg);color:var(--text-color);border-color:var(--border-color)}
+.dark-theme .stats-header{background:var(--bg-secondary-color);border-bottom-color:var(--border-color)}
+.dark-theme .stat-row{color:var(--text-color)}
+

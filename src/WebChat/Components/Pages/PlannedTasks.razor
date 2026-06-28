@@ -1,0 +1,638 @@
+@page "/planned-tasks"
+@using WebChat.Services
+@using Microsoft.AspNetCore.Components.Web.Infrastructure
+@using System.Text.Json
+@implements IDisposable
+@inject NavigationManager NavigationManager
+@inject WorkflowService WorkflowService
+@inject IJSRuntime JS
+@inject IConfiguration Configuration
+
+<PageTitle>Planerade uppgifter - Isa</PageTitle>
+
+<link href="css/planned-tasks-mobile.css" rel="stylesheet" />
+
+<div class="planned-tasks-container container-fluid">
+    <div class="page-header d-flex justify-content-between align-items-center mb-4">
+        <h1 class="text-primary mb-0">
+            <i class="bi bi-calendar-check me-2"></i>Planerade uppgifter
+        </h1>
+        <button class="btn btn-primary" @onclick="ScheduleNewTask">
+            <i class="bi bi-plus me-1"></i> Schemalägg uppgift
+        </button>
+    </div>
+
+
+    
+    @if (debugMode)
+    {
+        <div class="debug-panel alert alert-info">
+            <h5>Debug Info:</h5>
+            <p>API URL: @WorkflowService.GetBaseAddress()</p>
+            <p>Scheduled Tasks Count: @scheduledTasks.Count</p>
+            <p>Error: @(errorMessage ?? "None")</p>
+            <button class="btn btn-warning btn-sm" @onclick="ForceRefreshData">Force Refresh</button>
+            <button class="btn btn-danger btn-sm" @onclick="ToggleDebug">Hide Debug</button>
+        </div>
+    }
+    
+    <div class="planned-tasks-list">
+        @if (isLoading)
+        {
+            <div class="loading-state">
+                <span class="bi bi-arrow-repeat spin loading-icon"></span>
+                <p>Laddar schemalagda uppgifter...</p>
+            </div>
+        }
+        else if (hasError)
+        {
+            <div class="error-state">
+                <span class="bi bi-exclamation-triangle-fill error-icon"></span>
+                <h3>Fel vid laddning av uppgifter</h3>
+                <p>@errorMessage</p>
+                <button class="btn btn-primary" @onclick="LoadScheduledTasksAsync">
+                    <span class="bi bi-arrow-repeat"></span> Försök igen
+                </button>
+            </div>
+        }
+        else if (scheduledTasks.Count == 0)
+        {
+            <div class="empty-state">
+                <span class="bi bi-calendar-check empty-icon"></span>
+                <h3>Inga schemalagda uppgifter</h3>
+                <p>Schemalägg din första arbetsflödesuppgift för att automatisera återkommande arbete</p>
+                <button class="btn btn-primary" @onclick="ScheduleNewTask">Schemalägg uppgift</button>
+            </div>
+        }
+        else if (!HasTasksInView())
+        {
+            <div class="info-state">
+                <span class="bi bi-calendar-week empty-icon"></span>
+                <h3>Inga uppgifter schemalagda för denna period</h3>
+                <p>Prova en annan vecka eller schemalägg en ny uppgift</p>
+                
+                @if (HasUpcomingTasks())
+                {
+                    <div class="upcoming-tasks-preview">
+                        <h4>Nästa schemalagda uppgifter:</h4>
+                        @foreach (var task in GetNextTasks(3))
+                        {
+                            <div class="upcoming-task-item">
+                                <span class="bi bi-calendar-event"></span>
+                                <div class="upcoming-details">
+                                    <div class="upcoming-name">@task.Name</div>
+                                    <div class="upcoming-time">@task.NextRun?.ToString("ddd, MMM dd - HH:mm")</div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+                
+                <div class="task-actions">
+                    <button class="btn btn-outline-secondary" @onclick="ShowAllTasks">Visa alla uppgifter</button>
+                    <button class="btn btn-primary" @onclick="ScheduleNewTask">Schemalägg ny uppgift</button>
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="task-calendar">
+                <div class="calendar-header d-flex justify-content-between align-items-center mb-3">
+                    <button class="btn btn-sm btn-outline-secondary" @onclick="PreviousWeek">
+                        <i class="bi bi-chevron-left"></i>
+                    </button>
+                    <h4 class="mb-0 text-center">@CurrentWeekRange</h4>
+                    <button class="btn btn-sm btn-outline-secondary" @onclick="NextWeek">
+                        <i class="bi bi-chevron-right"></i>
+                    </button>
+                </div>
+
+                <div class="calendar-grid">
+                    @foreach (var task in GetDisplayedTasks())
+                    {
+                        <div class="scheduled-task-card @(task.IsUpcoming ? "upcoming" : "")">
+                            <div class="task-time">
+                                <div class="task-day">@task.NextRun?.ToString("ddd")</div>
+                                <div class="task-date">@task.NextRun?.ToString("MMM dd")</div>
+                                <div class="task-hour">@task.NextRun?.ToString("HH:mm")</div>
+                            </div>
+                            <div class="task-details">
+                                <h4 class="task-name">@task.Name</h4>
+                                <p class="task-schedule">@task.ScheduleDescription</p>
+                                <div class="task-actions">
+                                    <button class="btn btn-sm btn-outline-primary" @onclick="() => EditSchedule(task.Id)">
+                                        <span class="bi bi-pencil"></span> Redigera
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-secondary" @onclick="@(async () => await RunNow(task.Id))" disabled="@IsRunning(task.Id)">
+                                        @if (IsRunning(task.Id))
+                                        {
+                                            <span class="bi bi-gear-fill spin"></span>
+                                            <span>Kör...</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="bi bi-play-fill"></span>
+                                            <span>Kör nu</span>
+                                        }
+                                    </button>
+                                    @if (!IsStandardWorkflow(task.Id))
+                                    {
+                                        <button class="btn btn-sm btn-outline-danger" @onclick="@(async () => await DeleteScheduledTask(task.Id))" title="Ta bort uppgift">
+                                            <span class="bi bi-trash"></span> Ta bort
+                                        </button>
+                                    }
+                                    @if (!string.IsNullOrEmpty(GetWorkflowStatus(task.Id)) && !IsRunning(task.Id))
+                                    {
+                                        <div class="task-status @GetStatusClass(task.Id)">
+                                            @GetWorkflowStatus(task.Id)
+                                        </div>
+                                    }
+
+                                    @if (IsRunning(task.Id))
+                                    {
+                                        <div class="workflow-progress">
+                                            <div class="progress-bar"></div>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    private List<ScheduledTask> scheduledTasks = new();
+    private DateTime currentWeekStart = DateTime.Now.Date.AddDays(-(int)DateTime.Now.DayOfWeek);
+    private bool isLoading = true;
+    private bool hasError = false;
+    private string errorMessage = string.Empty;
+    private bool debugMode = false; // Debug mode disabled by default
+    
+    protected override async Task OnInitializedAsync()
+    {
+        try 
+        {
+            // Subscribe to workflow status changes
+            WorkflowService.OnWorkflowStatusChanged += OnWorkflowStatusChanged;
+            
+            await LoadScheduledTasksAsync();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Initialization error: {ex.Message}";
+            hasError = true;
+        }
+    }
+    
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            // Ensure mobile scrolling works on this page
+            await JS.InvokeVoidAsync("ensureMobileScrolling");
+
+            await SafeLogAsync("PlannedTasks: OnAfterRenderAsync starting");
+            await SafeLogAsync($"PlannedTasks: Found {scheduledTasks.Count} tasks");
+        }
+    }
+    
+    // Toggle debug panel
+    private void ToggleDebug()
+    {
+        debugMode = !debugMode;
+        StateHasChanged();
+    }
+    
+    // Force a refresh of data
+    private async Task ForceRefreshData()
+    {
+        await SafeLogAsync("PlannedTasks: Force refreshing data");
+        await LoadScheduledTasksAsync();
+        await SafeLogAsync($"PlannedTasks: Force refresh complete. Now have {scheduledTasks.Count} tasks");
+        StateHasChanged();
+    }
+    
+    private async Task LoadScheduledTasksAsync()
+    {
+        try
+        {
+            isLoading = true;
+            hasError = false;
+            
+            await SafeLogAsync("PlannedTasks: LoadScheduledTasksAsync starting");
+            await SafeLogAsync($"PlannedTasks: API Base URL = {WorkflowService.GetBaseAddress()}");
+            
+            // Hämta alla arbetsflöden först
+            var allWorkflows = await WorkflowService.GetWorkflowsAsync();
+            await SafeLogAsync($"PlannedTasks: Retrieved {allWorkflows.Count} total workflows");
+            
+            // Filtrera för schemalagda arbetsflöden (manual vs scheduled)
+            var scheduledWorkflows = allWorkflows.Where(w => w.ExecutionType?.ToLowerInvariant() == "scheduled" && !string.IsNullOrEmpty(w.Schedule)).ToList();
+            await SafeLogAsync($"PlannedTasks: Filtered to {scheduledWorkflows.Count} scheduled workflows");
+            
+            // Log details of each workflow for debugging
+            foreach (var w in scheduledWorkflows)
+            {
+                await SafeLogAsync($"PlannedTasks: Scheduled workflow: {w.Id} - {w.Name} - ExecutionType: {w.ExecutionType} - Schedule: {w.Schedule} - Enabled: {w.Enabled}");
+            }
+            
+            // Convert to view models
+            scheduledTasks = scheduledWorkflows.Select(w => new ScheduledTask
+            {
+                Id = w.Id,
+                Name = w.Name,
+                Schedule = w.Schedule ?? "",
+                ScheduleDescription = GetFriendlyScheduleDescription(w.Schedule ?? ""),
+                NextRun = CalculateNextRunTime(w.Schedule ?? ""),
+                IsEnabled = w.Enabled,
+                LastExecuted = null // Vi har inte denna information i WorkflowModel
+            }).ToList();
+            
+            await SafeLogAsync($"PlannedTasks: Converted {scheduledTasks.Count} scheduled tasks for display");
+            
+            // If there are no scheduled tasks from the API, use fallback data as test
+            if (scheduledTasks.Count == 0)
+            {
+                await SafeLogAsync("PlannedTasks: No tasks from API, adding manual test data");
+                
+                scheduledTasks.Add(new ScheduledTask
+                {
+                    Id = "daily-morning-report-workflow",
+                    Name = "Daglig Morgonrapport (Test)",
+                    ScheduleDescription = "Vardagar kl 09:00",
+                    Schedule = "0 9 * * 1-5",
+                    NextRun = GetNextWeekday(DateTime.Now.Date, DayOfWeek.Monday).AddHours(9),
+                    IsEnabled = true
+                });
+                
+                scheduledTasks.Add(new ScheduledTask
+                {
+                    Id = "weekly-summary",
+                    Name = "Veckorapport (Test)",
+                    ScheduleDescription = "Varje fredag kl 16:00",
+                    Schedule = "0 16 * * 5",
+                    NextRun = GetNextWeekday(DateTime.Now.Date, DayOfWeek.Friday).AddHours(16),
+                    IsEnabled = true
+                });
+            }
+            
+            // If still no scheduled tasks and in debug mode, add some placeholders
+            if (scheduledTasks.Count == 0)
+            {
+                await SafeLogAsync("PlannedTasks: Still no tasks, adding manual test data");
+                
+                scheduledTasks.Add(new ScheduledTask
+                {
+                    Id = "daily-morning-report-workflow",
+                    Name = "Daglig Morgonrapport (Test)",
+                    ScheduleDescription = "Vardagar kl 09:00",
+                    Schedule = "0 9 * * 1-5",
+                    NextRun = GetNextWeekday(DateTime.Now.Date, DayOfWeek.Monday).AddHours(9),
+                    IsEnabled = true
+                });
+                
+                scheduledTasks.Add(new ScheduledTask
+                {
+                    Id = "weekly-summary",
+                    Name = "Veckorapport (Test)",
+                    ScheduleDescription = "Varje fredag kl 16:00",
+                    Schedule = "0 16 * * 5",
+                    NextRun = GetNextWeekday(DateTime.Now.Date, DayOfWeek.Friday).AddHours(16),
+                    IsEnabled = true
+                });
+                
+                await SafeLogAsync($"PlannedTasks: Added {scheduledTasks.Count} manual test tasks");
+            }
+        }
+        catch (Exception ex)
+        {
+            hasError = true;
+            errorMessage = $"Failed to load scheduled tasks: {ex.Message}";
+            await SafeLogAsync($"PlannedTasks: Error in LoadScheduledTasksAsync: {ex.Message}", true);
+            await SafeLogAsync(ex.StackTrace ?? "", true);
+        }
+        finally
+        {
+            isLoading = false;
+            await InvokeAsync(StateHasChanged);
+            await SafeLogAsync($"PlannedTasks: LoadScheduledTasksAsync complete. Final count: {scheduledTasks.Count} tasks");
+        }
+    }
+    
+    private string GetFriendlyScheduleDescription(string cronExpression)
+    {
+        // Simple conversion of CRON expressions to human-readable text
+        // This could be enhanced with a full CRON parser library if needed
+        if (string.IsNullOrEmpty(cronExpression))
+            return "Not scheduled";
+            
+        var parts = cronExpression.Split(' ');
+        if (parts.Length < 5)
+            return cronExpression;
+            
+        if (parts[0] == "0" && parts[1] == "9" && parts[2] == "*" && parts[3] == "*" && parts[4] == "1-5")
+            return "Weekdays at 9:00 AM";
+            
+        if (parts[0] == "0" && parts[1] == "16" && parts[2] == "*" && parts[3] == "*" && parts[4] == "5")
+            return "Every Friday at 4:00 PM";
+            
+        // Default case
+        return cronExpression;
+    }
+    
+    private List<ScheduledTask> GetDisplayedTasks()
+    {
+        var endOfWeek = currentWeekStart.AddDays(7);
+        return scheduledTasks
+            .OrderBy(t => t.NextRun)
+            .ToList();
+    }
+    
+    private DateTime GetNextWeekday(DateTime start, DayOfWeek day)
+    {
+        int daysToAdd = ((int)day - (int)start.DayOfWeek + 7) % 7;
+        return start.AddDays(daysToAdd);
+    }
+    
+    private string CurrentWeekRange => 
+        $"{currentWeekStart:MMM dd} - {currentWeekStart.AddDays(6):MMM dd}, {currentWeekStart.Year}";
+    
+    private void PreviousWeek()
+    {
+        currentWeekStart = currentWeekStart.AddDays(-7);
+        StateHasChanged();
+    }
+    
+    private void NextWeek()
+    {
+        currentWeekStart = currentWeekStart.AddDays(7);
+        StateHasChanged();
+    }
+    
+    private void ScheduleNewTask()
+    {
+        NavigationManager.NavigateTo("/workflows/create");
+    }
+    
+    private void EditSchedule(string id)
+    {
+        NavigationManager.NavigateTo($"/workflows/edit/{id}");
+    }
+    
+    private async Task RunNow(string id)
+    {
+        try
+        {
+            await WorkflowService.RunWorkflowAsync(id);
+            // State change will be handled by the OnWorkflowStatusChanged event
+        }
+        catch (Exception ex)
+        {
+            // Handle any exceptions
+            Console.Error.WriteLine($"Error running workflow: {ex.Message}");
+        }
+    }
+    
+    private bool IsRunning(string id)
+    {
+        return WorkflowService.IsWorkflowRunning(id);
+    }
+    
+    private string GetWorkflowStatus(string id)
+    {
+        return WorkflowService.GetWorkflowRunningStatus(id);
+    }
+    
+    private string GetStatusClass(string id)
+    {
+        var status = GetWorkflowStatus(id);
+        if (status.StartsWith("Completed"))
+            return "status-success";
+        if (status.StartsWith("Failed") || status.StartsWith("Error"))
+            return "status-error";
+        return "status-info";
+    }
+    
+    private void OnWorkflowStatusChanged(string id, string status)
+    {
+        // Force UI update when status changes
+        InvokeAsync(StateHasChanged);
+    }
+    
+    public void Dispose()
+    {
+        // Unsubscribe from events when component is disposed
+        WorkflowService.OnWorkflowStatusChanged -= OnWorkflowStatusChanged;
+    }
+    
+    private bool HasTasksInView()
+    {
+        var endOfWeek = currentWeekStart.AddDays(7);
+        return scheduledTasks.Any(t => t.NextRun >= currentWeekStart && t.NextRun < endOfWeek);
+    }
+    
+    private bool HasUpcomingTasks()
+    {
+        return scheduledTasks.Any(t => t.NextRun >= DateTime.Now);
+    }
+    
+    private List<ScheduledTask> GetNextTasks(int count)
+    {
+        return scheduledTasks
+            .Where(t => t.NextRun >= DateTime.Now)
+            .OrderBy(t => t.NextRun)
+            .Take(count)
+            .ToList();
+    }
+    
+    private void ShowAllTasks()
+    {
+        // Reset to current week and force a rerender to show all tasks
+        currentWeekStart = DateTime.Now.Date.AddDays(-(int)DateTime.Now.DayOfWeek);
+        ForceRefreshData().GetAwaiter().GetResult();
+        StateHasChanged();
+    }
+    
+    // Helper method to calculate next run time from a cron expression
+    private DateTime? CalculateNextRunTime(string cronExpression)
+    {
+        if (string.IsNullOrEmpty(cronExpression))
+            return null;
+        
+        try
+        {
+            // Simple implementation for common patterns
+            // In a real app, you would use a cron parser library
+            
+            // Parse parts
+            var parts = cronExpression.Split(' ');
+            if (parts.Length != 5)
+                return null;
+            
+            var minute = parts[0];
+            var hour = parts[1];
+            var dayOfMonth = parts[2];
+            var month = parts[3];
+            var dayOfWeek = parts[4];
+            
+            var now = DateTime.Now;
+            var result = now;
+            
+            // For simplicity, let's just handle some common cases
+            
+            // Daily at specific hour (e.g., "0 9 * * *" for 9:00 AM daily)
+            if (hour != "*" && dayOfMonth == "*" && month == "*" && dayOfWeek == "*") 
+            {
+                var hourValue = int.Parse(hour);
+                var minuteValue = minute == "*" ? 0 : int.Parse(minute);
+                
+                result = new DateTime(now.Year, now.Month, now.Day, hourValue, minuteValue, 0);
+                if (result <= now)
+                    result = result.AddDays(1);
+                
+                return result;
+            }
+            
+            // Weekdays (e.g., "0 9 * * 1-5" for 9:00 AM Monday-Friday)
+            if (dayOfWeek == "1-5") 
+            {
+                var hourValue = int.Parse(hour);
+                var minuteValue = minute == "*" ? 0 : int.Parse(minute);
+                
+                result = new DateTime(now.Year, now.Month, now.Day, hourValue, minuteValue, 0);
+                
+                // If today is weekend or time has passed, find next weekday
+                if (now.DayOfWeek == DayOfWeek.Saturday)
+                    result = result.AddDays(2); // Next Monday
+                else if (now.DayOfWeek == DayOfWeek.Sunday) 
+                    result = result.AddDays(1); // Next Monday
+                else if (result <= now)
+                {
+                    // Add one day, and if it's Saturday, add 2 more
+                    result = result.AddDays(1);
+                    if (result.DayOfWeek == DayOfWeek.Saturday)
+                        result = result.AddDays(2);
+                }
+                
+                return result;
+            }
+            
+            // Specific day of week (e.g., "0 16 * * 5" for 4:00 PM Friday)
+            if (dayOfWeek.Length == 1 && int.TryParse(dayOfWeek, out int dow))
+            {
+                var targetDow = dow == 0 ? DayOfWeek.Sunday : (DayOfWeek)dow;
+                var daysUntilTarget = ((int)targetDow - (int)now.DayOfWeek + 7) % 7;
+                if (daysUntilTarget == 0) // Today is the target day
+                {
+                    var hourValue = int.Parse(hour);
+                    var minuteValue = minute == "*" ? 0 : int.Parse(minute);
+                    var todayTarget = new DateTime(now.Year, now.Month, now.Day, hourValue, minuteValue, 0);
+                    
+                    if (todayTarget > now)
+                        return todayTarget;
+                    
+                    daysUntilTarget = 7; // Next week
+                }
+                
+                var hourVal = int.Parse(hour);
+                var minVal = minute == "*" ? 0 : int.Parse(minute);
+                return new DateTime(now.Year, now.Month, now.Day, hourVal, minVal, 0).AddDays(daysUntilTarget);
+            }
+            
+            // For more complex expressions, fall back to today + 1 week
+            return now.AddDays(7);
+        }
+        catch
+        {
+            return null;
+        }
+    }
+    
+    private class ScheduledTask
+    {
+        public string Id { get; set; } = "";
+        public string Name { get; set; } = "";
+        public string ScheduleDescription { get; set; } = "";
+        public string Schedule { get; set; } = "";
+        public DateTime? NextRun { get; set; }
+        public DateTime? LastExecuted { get; set; }
+        public bool IsEnabled { get; set; } = true;
+        
+        public bool IsUpcoming => NextRun?.Date == DateTime.Now.Date;
+    }
+    
+    // Safe logging method that won't fail during static rendering
+    private async Task SafeLogAsync(string message, bool isError = false)
+    {
+        try
+        {
+            if (isError)
+            {
+                await JS.InvokeVoidAsync("console.error", message);
+            }
+            else
+            {
+                await JS.InvokeVoidAsync("console.log", message);
+            }
+        }
+        catch
+        {
+            // Fallback to server-side logging if JavaScript interop is not available
+            if (isError)
+            {
+                Console.WriteLine($"ERROR: {message}");
+            }
+            else
+            {
+                Console.WriteLine(message);
+            }
+        }
+    }
+    
+    private bool IsStandardWorkflow(string id)
+    {
+        var standardWorkflowIds = new[]
+        {
+            "daily-morning-report-workflow",
+            "manual-morning-report-workflow",
+        };
+        return standardWorkflowIds.Contains(id);
+    }
+    
+    private async Task DeleteScheduledTask(string id)
+    {
+        try
+        {
+            // Check if this is a standard workflow
+            if (IsStandardWorkflow(id))
+            {
+                await SafeLogAsync($"Cannot delete standard workflow: {id}", true);
+                return;
+            }
+            
+            // Call the service to delete the workflow
+            var success = await WorkflowService.DeleteWorkflowAsync(id);
+            
+            if (success)
+            {
+                await SafeLogAsync($"Successfully deleted scheduled task: {id}");
+                // Reload the tasks to update the UI
+                await LoadScheduledTasksAsync();
+            }
+            else
+            {
+                await SafeLogAsync($"Failed to delete scheduled task: {id}", true);
+            }
+        }
+        catch (Exception ex)
+        {
+            await SafeLogAsync($"Error deleting scheduled task {id}: {ex.Message}", true);
+        }
+    }
+
+
+}

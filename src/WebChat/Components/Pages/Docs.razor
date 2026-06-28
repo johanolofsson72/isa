@@ -1,0 +1,114 @@
+@page "/docs/{Slug}"
+@using Microsoft.AspNetCore.Components
+@inject IWebHostEnvironment Env
+
+<PageTitle>Dokumentation</PageTitle>
+
+<div class="doc-page">
+    @if (IsLoading)
+    {
+        <p>Laddar dokument...</p>
+    }
+    else if (!string.IsNullOrEmpty(Error))
+    {
+        <div class="alert alert-warning">
+            <strong>Hittade inte dokumentet:</strong> @Error
+        </div>
+        @if (AvailableDocs.Count > 0)
+        {
+            <div>
+                <p>Tillgängliga dokument:</p>
+                <ul>
+                    @foreach (var d in AvailableDocs)
+                    {
+                        <li><a href="/docs/@d" target="_blank">@d</a></li>
+                    }
+                </ul>
+            </div>
+        }
+    }
+    else
+    {
+        <article class="doc-content">
+            <pre style="white-space: pre-wrap">@DocContent</pre>
+        </article>
+    }
+</div>
+
+@code {
+    [Parameter] public string Slug { get; set; } = string.Empty;
+
+    private string? DocContent;
+    private string? Error;
+    private bool IsLoading;
+    private List<string> AvailableDocs = new();
+
+    protected override async Task OnParametersSetAsync()
+    {
+        IsLoading = true;
+        Error = null;
+        DocContent = null;
+        AvailableDocs.Clear();
+
+        // Map legacy aliases
+        var mappedSlug = Slug;
+        if (string.Equals(Slug, "IsaGuide", StringComparison.OrdinalIgnoreCase))
+        {
+            mappedSlug = "SmartAgentGuide";
+        }
+
+        try
+        {
+            // Try to locate the docs directory
+            var contentRoot = Env.ContentRootPath; // typically src/WebChat
+            var primaryDocsRoot = Path.GetFullPath(Path.Combine(contentRoot, "../../docs"));
+            var fallbackDocsRoot = Path.Combine(contentRoot, "docs");
+
+            string? docPath = null;
+            var candidate1 = Path.Combine(primaryDocsRoot, $"{mappedSlug}.md");
+            var candidate2 = Path.Combine(fallbackDocsRoot, $"{mappedSlug}.md");
+
+            if (File.Exists(candidate1))
+            {
+                docPath = candidate1;
+            }
+            else if (File.Exists(candidate2))
+            {
+                docPath = candidate2;
+            }
+            else if (!string.Equals(mappedSlug, "SmartAgentGuide", StringComparison.OrdinalIgnoreCase))
+            {
+                // Fallback: try SmartAgentGuide if requested doc missing
+                var smartGuide1 = Path.Combine(primaryDocsRoot, "SmartAgentGuide.md");
+                var smartGuide2 = Path.Combine(fallbackDocsRoot, "SmartAgentGuide.md");
+                if (File.Exists(smartGuide1)) docPath = smartGuide1; else if (File.Exists(smartGuide2)) docPath = smartGuide2;
+            }
+
+            // List available md docs for convenience
+            if (Directory.Exists(primaryDocsRoot))
+            {
+                AvailableDocs = Directory.GetFiles(primaryDocsRoot, "*.md")
+                    .Select(f => Path.GetFileNameWithoutExtension(f))
+                    .OrderBy(x => x)
+                    .ToList();
+            }
+
+            if (docPath is null)
+            {
+                Error = $"/docs/{Slug} (saknas).";
+            }
+            else
+            {
+                DocContent = await File.ReadAllTextAsync(docPath);
+            }
+        }
+        catch (Exception ex)
+        {
+            Error = ex.Message;
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+}

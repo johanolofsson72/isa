@@ -1,0 +1,477 @@
+@page "/plugins"
+@* Ensure table respects theme variables; CSS file already included in App.razor *@
+
+@using WebChat.Services
+@inject PluginManagementService PluginService
+@inject IJSRuntime JS
+
+<PageTitle>Plugin Management - Isa</PageTitle>
+
+<link href="css/plugin-management-mobile-v3.css" rel="stylesheet" />
+
+<div class="plugin-management desktop-optimized">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="text-primary">
+            <i class="bi bi-plugin me-2"></i>Plugin Management
+        </h2>
+        <button type="button" class="btn btn-outline-primary" @onclick="RefreshPlugins" disabled="@isLoading">
+            <i class="bi bi-arrow-clockwise me-1"></i>
+            @if (isLoading)
+            {
+                <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+            }
+            Refresh
+        </button>
+    </div>
+
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i>
+            <strong>Error:</strong> @errorMessage
+            <button type="button" class="btn-close" @onclick="() => errorMessage = null" aria-label="Close"></button>
+        </div>
+    }
+
+    @if (!string.IsNullOrEmpty(successMessage))
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="bi bi-check-circle-fill me-2"></i>
+            @successMessage
+            <button type="button" class="btn-close" @onclick="() => successMessage = null" aria-label="Close"></button>
+        </div>
+    }
+
+    @if (isLoading)
+    {
+        <div class="d-flex justify-content-center my-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading plugins...</span>
+            </div>
+        </div>
+    }
+    else if (plugins.Any())
+    {
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">
+                            <i class="bi bi-list-ul me-2"></i>Installed Plugins (@plugins.Count)
+                        </h5>
+                        <div class="btn-group btn-group-sm" role="group">
+                            <button type="button" class="btn btn-outline-success" @onclick="EnableAllPlugins" disabled="@isProcessing">
+                                <i class="bi bi-check-all me-1"></i>Enable All
+                            </button>
+                            <button type="button" class="btn btn-outline-danger" @onclick="DisableAllPlugins" disabled="@isProcessing">
+                                <i class="bi bi-x-circle me-1"></i>Disable All
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th scope="col" style="width: 40px;"></th>
+                                        <th scope="col">Plugin Name</th>
+                                        <th scope="col">Description</th>
+                                        <th scope="col" style="width: 100px;">Status</th>
+                                        <th scope="col" style="width: 150px;">Last Modified</th>
+                                        <th scope="col" style="width: 120px;">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var plugin in plugins.OrderBy(p => p.PluginName))
+                                    {
+                                        <tr class="@(plugin.IsEnabled ? "" : "table-secondary")">
+                                            <td class="text-center">
+                                                @if (plugin.IsEnabled)
+                                                {
+                                                    <i class="bi bi-check-circle-fill text-success" title="Enabled"></i>
+                                                }
+                                                else
+                                                {
+                                                    <i class="bi bi-x-circle-fill text-danger" title="Disabled"></i>
+                                                }
+                                            </td>
+                                            <td>
+                                                <strong>@plugin.PluginName</strong>
+                                                <br />
+                                                <small class="text-muted">ID: @plugin.PluginId</small>
+                                            </td>
+                                            <td>
+                                                @if (!string.IsNullOrEmpty(plugin.Description))
+                                                {
+                                                    <span>@plugin.Description</span>
+                                                }
+                                                else
+                                                {
+                                                    <em class="text-muted">No description available</em>
+                                                }
+                                            </td>
+                                            <td>
+                                                @if (plugin.IsEnabled)
+                                                {
+                                                    <span class="badge bg-success">
+                                                        <i class="bi bi-check-lg me-1"></i>Enabled
+                                                    </span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="badge bg-danger">
+                                                        <i class="bi bi-x-lg me-1"></i>Disabled
+                                                    </span>
+                                                }
+                                            </td>
+                                            <td>
+                                                <small class="text-muted">
+                                                    @plugin.LastModified.ToString("MM/dd HH:mm")
+                                                    @if (!string.IsNullOrEmpty(plugin.ModifiedBy))
+                                                    {
+                                                        <br /><span>by @plugin.ModifiedBy</span>
+                                                    }
+                                                </small>
+                                            </td>
+                                            <td>
+                                                <button type="button"
+                                                        class="btn btn-sm @(plugin.IsEnabled ? "btn-outline-danger" : "btn-outline-success")"
+                                                        @onclick="() => TogglePlugin(plugin.PluginName)"
+                                                        disabled="@(isProcessing || processingPlugins.Contains(plugin.PluginName))">
+                                                    @if (processingPlugins.Contains(plugin.PluginName))
+                                                    {
+                                                        <span class="spinner-border spinner-border-sm" role="status"></span>
+                                                    }
+                                                    else if (plugin.IsEnabled)
+                                                    {
+                                                        <i class="bi bi-pause-fill me-1">Disable</i>
+                                                    }
+                                                    else
+                                                    {
+                                                        <i class="bi bi-play-fill me-1">Enable</i>
+                                                    }
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Plugin Statistics Card -->
+        <div class="row mt-4">
+            <div class="col-md-6">
+                <div class="card border-primary">
+                    <div class="card-body text-center">
+                        <h5 class="card-title text-primary">
+                            <i class="bi bi-bar-chart me-2"></i>Plugin Statistics
+                        </h5>
+                        <div class="row">
+                            <div class="col-6">
+                                <h3 class="text-success">@plugins.Count(p => p.IsEnabled)</h3>
+                                <p class="mb-0">Enabled</p>
+                            </div>
+                            <div class="col-6">
+                                <h3 class="text-danger">@plugins.Count(p => !p.IsEnabled)</h3>
+                                <p class="mb-0">Disabled</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card border-info">
+                    <div class="card-body">
+                        <h5 class="card-title text-info">
+                            <i class="bi bi-info-circle me-2"></i>Information
+                        </h5>
+                        <p class="card-text">
+                            Plugin changes take effect immediately. Disabled plugins will not be loaded when the agent starts.
+                        </p>
+                        <p class="card-text">
+                            <small class="text-muted">
+                                <i class="bi bi-clock me-1"></i>Last refreshed: @lastRefreshed.ToString("HH:mm:ss")
+                            </small>
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="text-center py-5">
+            <i class="bi bi-plugin text-muted" style="font-size: 4rem;"></i>
+            <h4 class="text-muted mt-3">No Plugins Found</h4>
+            <p class="text-muted">No plugins are currently registered in the system.</p>
+            <button type="button" class="btn btn-primary" @onclick="RefreshPlugins">
+                <i class="bi bi-arrow-clockwise me-1"></i>Refresh
+            </button>
+        </div>
+    }
+</div>
+
+@code {
+    private List<PluginStateDto> plugins = new();
+    private bool isLoading = true;
+    private bool isProcessing = false;
+    private HashSet<string> processingPlugins = new();
+    private string? errorMessage;
+    private string? successMessage;
+    private DateTime lastRefreshed = DateTime.Now;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await RefreshPlugins();
+
+        // Subscribe to plugin status changes
+        PluginService.OnPluginStatusChanged += OnPluginStatusChanged;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            // Ensure mobile scrolling works on this page
+            await JS.InvokeVoidAsync("ensureMobileScrolling");
+        }
+    }
+
+    public void Dispose()
+    {
+        // Unsubscribe from events
+        PluginService.OnPluginStatusChanged -= OnPluginStatusChanged;
+    }
+
+    private async Task RefreshPlugins()
+    {
+        isLoading = true;
+        errorMessage = null;
+        successMessage = null;
+        StateHasChanged();
+
+        try
+        {
+            var result = await PluginService.GetAllPluginsAsync();
+            if (result != null)
+            {
+                plugins = result;
+                lastRefreshed = DateTime.Now;
+                successMessage = $"Successfully loaded {plugins.Count} plugins";
+            }
+            else
+            {
+                errorMessage = "Failed to load plugins from the API";
+                plugins = new List<PluginStateDto>();
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error loading plugins: {ex.Message}";
+            plugins = new List<PluginStateDto>();
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task TogglePlugin(string pluginName)
+    {
+        // Prevent double-clicks by checking if already processing
+        if (processingPlugins.Contains(pluginName))
+        {
+            return;
+        }
+
+        processingPlugins.Add(pluginName);
+        errorMessage = null;
+        successMessage = null;
+        StateHasChanged();
+
+        try
+        {
+            var success = await PluginService.TogglePluginAsync(pluginName, "WebChat User");
+            if (success)
+            {
+                // Refresh the plugin state from server to ensure consistency
+                await RefreshSinglePlugin(pluginName);
+            }
+            else
+            {
+                errorMessage = $"Failed to toggle plugin '{pluginName}'";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error toggling plugin '{pluginName}': {ex.Message}";
+        }
+        finally
+        {
+            processingPlugins.Remove(pluginName);
+            StateHasChanged();
+        }
+    }
+
+    private async Task RefreshSinglePlugin(string pluginName)
+    {
+        try
+        {
+            var updatedPlugin = await PluginService.GetPluginAsync(pluginName);
+            if (updatedPlugin != null)
+            {
+                var existingPlugin = plugins.FirstOrDefault(p => p.PluginName == pluginName);
+                if (existingPlugin != null)
+                {
+                    // Update the existing plugin with server state
+                    existingPlugin.IsEnabled = updatedPlugin.IsEnabled;
+                    existingPlugin.LastModified = updatedPlugin.LastModified;
+                    existingPlugin.ModifiedBy = updatedPlugin.ModifiedBy;
+
+                    successMessage = $"Plugin '{pluginName}' has been {(updatedPlugin.IsEnabled ? "enabled" : "disabled")}";
+                }
+                else
+                {
+                    // Plugin not found in local list, refresh all plugins
+                    await RefreshPlugins();
+                }
+            }
+            else
+            {
+                // Server returned null, plugin might have been deleted or there was an error
+                errorMessage = $"Could not retrieve updated state for plugin '{pluginName}'. Please refresh the page.";
+                await RefreshPlugins();
+            }
+        }
+        catch (Exception ex)
+        {
+            // If we can't refresh the single plugin, refresh all plugins
+            errorMessage = $"Error refreshing plugin '{pluginName}': {ex.Message}";
+            await RefreshPlugins();
+        }
+    }
+
+    private async Task EnableAllPlugins()
+    {
+        isProcessing = true;
+        errorMessage = null;
+        successMessage = null;
+        StateHasChanged();
+
+        try
+        {
+            var disabledPlugins = plugins.Where(p => !p.IsEnabled).ToList();
+            var successCount = 0;
+
+            foreach (var plugin in disabledPlugins)
+            {
+                var success = await PluginService.UpdatePluginAsync(
+                    plugin.PluginName,
+                    plugin.Description,
+                    true,
+                    "WebChat User");
+
+                if (success)
+                {
+                    plugin.IsEnabled = true;
+                    plugin.LastModified = DateTime.Now;
+                    plugin.ModifiedBy = "WebChat User";
+                    successCount++;
+                }
+            }
+
+            if (successCount == disabledPlugins.Count)
+            {
+                successMessage = $"Successfully enabled {successCount} plugins";
+            }
+            else
+            {
+                errorMessage = $"Enabled {successCount} out of {disabledPlugins.Count} plugins";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error enabling plugins: {ex.Message}";
+        }
+        finally
+        {
+            isProcessing = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task DisableAllPlugins()
+    {
+        isProcessing = true;
+        errorMessage = null;
+        successMessage = null;
+        StateHasChanged();
+
+        try
+        {
+            var enabledPlugins = plugins.Where(p => p.IsEnabled).ToList();
+            var successCount = 0;
+
+            foreach (var plugin in enabledPlugins)
+            {
+                var success = await PluginService.UpdatePluginAsync(
+                    plugin.PluginName,
+                    plugin.Description,
+                    false,
+                    "WebChat User");
+
+                if (success)
+                {
+                    plugin.IsEnabled = false;
+                    plugin.LastModified = DateTime.Now;
+                    plugin.ModifiedBy = "WebChat User";
+                    successCount++;
+                }
+            }
+
+            if (successCount == enabledPlugins.Count)
+            {
+                successMessage = $"Successfully disabled {successCount} plugins";
+            }
+            else
+            {
+                errorMessage = $"Disabled {successCount} out of {enabledPlugins.Count} plugins";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error disabling plugins: {ex.Message}";
+        }
+        finally
+        {
+            isProcessing = false;
+            StateHasChanged();
+        }
+    }
+
+    private void OnPluginStatusChanged(string pluginName, bool isEnabled)
+    {
+        // This method is called when a plugin status changes
+        // Update the UI if needed
+        InvokeAsync(async () =>
+        {
+            var plugin = plugins.FirstOrDefault(p => p.PluginName == pluginName);
+            if (plugin != null)
+            {
+                plugin.IsEnabled = isEnabled;
+                plugin.LastModified = DateTime.Now;
+                StateHasChanged();
+            }
+            else
+            {
+                // Plugin not found in local list, might be a new plugin or state is out of sync
+                await RefreshPlugins();
+            }
+        });
+    }
+}

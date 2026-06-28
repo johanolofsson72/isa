@@ -1,0 +1,100 @@
+/* Dark mode fixes for Plugin Management (v3 - cache bust) */
+
+/* Scope to html.dark-theme to follow app toggle */
+html.dark-theme {
+  /* Table defaults for dark mode */
+  /* Ensure Bootstrap tables use dark variables */
+  --pm-table-striped: rgba(255,255,255,0.03);
+  --pm-table-hover: rgba(255,255,255,0.06);
+}
+
+/* Cards */
+html.dark-theme .plugin-management .card {
+  background: var(--card-bg) !important;
+  border-color: var(--border-color) !important;
+  color: var(--text-color) !important;
+}
+
+html.dark-theme .plugin-management .card .card-header {
+  background: var(--bg-secondary-color) !important;
+  border-bottom: 1px solid var(--border-color) !important;
+  color: var(--text-color) !important;
+}
+
+/* Plugin state cards */
+html.dark-theme .plugin-card {
+  background: var(--card-bg) !important;
+  border-color: var(--border-color) !important;
+  color: var(--text-color) !important;
+}
+html.dark-theme .plugin-card.enabled {
+  border-color: var(--success-color) !important;
+  background: linear-gradient(135deg, color-mix(in oklab, var(--success-color) 10%, transparent) 0%, transparent 100%) !important;
+}
+html.dark-theme .plugin-card.disabled {
+  border-color: var(--secondary-color) !important;
+  background: linear-gradient(135deg, color-mix(in oklab, var(--secondary-color) 10%, transparent) 0%, transparent 100%) !important;
+}
+
+/* Text */
+html.dark-theme .plugin-title,
+html.dark-theme .plugin-description,
+html.dark-theme .plugin-feature,
+html.dark-theme .plugin-stat,
+html.dark-theme .page-title,
+html.dark-theme .page-description {
+  color: var(--text-color) !important;
+}
+
+/* Summary and function lists */
+html.dark-theme .functions-list,
+html.dark-theme .summary-section {
+  background: rgba(255,255,255,0.03) !important;
+  border: 1px solid var(--border-color) !important;
+}
+
+/* Badges */
+html.dark-theme .badge.bg-primary { background-color: var(--primary-color) !important; }
+html.dark-theme .badge.bg-success { background-color: var(--success-color) !important; }
+html.dark-theme .badge.bg-secondary { background-color: var(--secondary-color) !important; }
+html.dark-theme .badge.bg-danger { background-color: var(--danger-color) !important; }
+
+/* Buttons (outline contrast) */
+html.dark-theme .btn-outline-primary { color: var(--primary-color); border-color: var(--primary-color); }
+html.dark-theme .btn-outline-success { color: var(--success-color); border-color: var(--success-color); }
+html.dark-theme .btn-outline-danger { color: var(--danger-color); border-color: var(--danger-color); }
+html.dark-theme .btn-outline-primary:hover { background: color-mix(in oklab, var(--primary-color) 15%, transparent); }
+html.dark-theme .btn-outline-success:hover { background: color-mix(in oklab, var(--success-color) 15%, transparent); }
+html.dark-theme .btn-outline-danger:hover { background: color-mix(in oklab, var(--danger-color) 15%, transparent); }
+
+/* Alerts */
+html.dark-theme .alert-success { background: color-mix(in oklab, var(--success-color) 10%, transparent); color: var(--text-color); }
+html.dark-theme .alert-danger { background: color-mix(in oklab, var(--danger-color) 10%, transparent); color: var(--text-color); }
+html.dark-theme .alert { border: 1px solid var(--border-color); }
+
+/* Tables: override Bootstrap variables instead of static colors */
+html.dark-theme .plugin-management .table {
+  --bs-table-bg: var(--card-bg);
+  --bs-table-color: var(--text-color);
+  --bs-table-border-color: var(--border-color);
+  --bs-table-striped-bg: var(--pm-table-striped);
+  --bs-table-striped-color: var(--text-color);
+  --bs-table-hover-bg: var(--pm-table-hover);
+  --bs-table-hover-color: var(--text-color);
+}
+
+/* Light header row in dark theme should use secondary bg, not white */
+html.dark-theme .plugin-management .table-light {
+  --bs-table-bg: var(--bg-secondary-color) !important;
+  --bs-table-color: var(--text-color) !important;
+  --bs-table-border-color: var(--border-color) !important;
+}
+
+/* Hover and striped already covered by vars, add extra safety */
+html.dark-theme .plugin-management .table-hover tbody tr:hover { background-color: var(--pm-table-hover) !important; }
+html.dark-theme .plugin-management .table-striped tbody tr:nth-of-type(odd) { background-color: var(--pm-table-striped) !important; }
+
+/* Small UI bits */
+html.dark-theme .text-muted { color: var(--text-secondary-color) !important; }
+html.dark-theme .btn-close { filter: invert(1) grayscale(1); }
+

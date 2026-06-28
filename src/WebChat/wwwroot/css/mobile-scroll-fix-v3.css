@@ -1,0 +1,190 @@
+/* Mobile Scroll Fix (v1) - Fix scrolling issues on mobile devices */
+
+/* Ensure all page containers can scroll properly on mobile */
+@media (max-width: 767px) {
+  /* Main content area should be scrollable */
+  .main-content {
+    height: calc(100vh - 60px) !important; /* Account for mobile nav */
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    -webkit-overflow-scrolling: touch !important; /* iOS smooth scrolling */
+    position: relative !important;
+  }
+
+  /* Page containers should fill available space and be scrollable */
+  .workflows-container,
+  .history-container,
+  .plugin-management,
+  .planned-tasks-container,
+  .workflow-editor {
+    height: calc(100vh - 120px) !important; /* Account for header + nav */
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    -webkit-overflow-scrolling: touch !important;
+    padding: 12px 8px !important;
+    box-sizing: border-box !important;
+  }
+
+  /* Ensure content lists are not height-constrained */
+  .workflows-list,
+  .history-list,
+  .plugins-grid,
+  .planned-tasks-list,
+  .calendar-grid {
+    height: auto !important;
+    min-height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+    padding-bottom: 40px !important; /* Extra space at bottom */
+  }
+
+  /* Fix for workflow editor specifically */
+  .workflow-editor .editor-container {
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+    padding-bottom: 40px !important;
+  }
+
+  /* Ensure cards don't have height constraints */
+  .workflow-card,
+  .history-card,
+  .plugin-card,
+  .scheduled-task-card {
+    height: auto !important;
+    min-height: auto !important;
+    max-height: none !important;
+  }
+
+  /* Override any fixed heights that prevent scrolling */
+  .container-fluid,
+  .container {
+    height: auto !important;
+    min-height: auto !important;
+    max-height: none !important;
+  }
+
+  /* Ensure page headers don't interfere with scrolling */
+  .page-header {
+    position: relative !important;
+    z-index: 1 !important;
+    background-color: var(--bg-color, #ffffff) !important;
+    margin-bottom: 16px !important;
+  }
+
+  /* Fix for any absolute positioned elements that might block scrolling */
+  .swipeable-item {
+    position: relative !important;
+    touch-action: pan-y !important; /* Allow vertical scrolling */
+  }
+
+  /* Ensure touch events work properly for scrolling */
+  body {
+    touch-action: pan-y !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+
+  /* Override any JavaScript-imposed scroll prevention */
+  body.no-scroll {
+    overflow: auto !important;
+    position: static !important;
+  }
+
+  /* Fix for iOS Safari viewport issues */
+  @supports (-webkit-touch-callout: none) {
+    .main-content {
+      height: calc(100vh - 60px) !important;
+      height: calc(100dvh - 60px) !important; /* Dynamic viewport height */
+    }
+
+    .workflows-container,
+    .history-container,
+    .plugin-management,
+    .planned-tasks-container,
+    .workflow-editor {
+      height: calc(100vh - 120px) !important;
+      height: calc(100dvh - 120px) !important;
+    }
+  }
+}
+
+/* Desktop - ensure no conflicts */
+@media (min-width: 768px) {
+  .main-content {
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  .workflows-container,
+  .history-container,
+  .plugin-management,
+  .planned-tasks-container,
+  .workflow-editor {
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  /* Desktop-specific: Make plugin management wider and more centered */
+  .plugin-management.desktop-optimized {
+    max-width: 1400px !important; /* Wider than default Bootstrap container */
+    margin: 0 auto !important; /* Center the container */
+    padding: 0 24px !important; /* Add some padding from edges */
+  }
+
+  /* Make the plugin table card wider on desktop */
+  .plugin-management.desktop-optimized .row {
+    justify-content: center !important;
+  }
+
+  .plugin-management.desktop-optimized .col-12 {
+    max-width: 100% !important; /* Use full available width */
+  }
+
+  /* Optimize table column widths for desktop */
+  .plugin-management.desktop-optimized .table th:nth-child(1) { width: 50px !important; } /* Status icon */
+  .plugin-management.desktop-optimized .table th:nth-child(2) { width: 25% !important; } /* Plugin name */
+  .plugin-management.desktop-optimized .table th:nth-child(3) { width: 40% !important; } /* Description */
+  .plugin-management.desktop-optimized .table th:nth-child(4) { width: 120px !important; } /* Status badge */
+  .plugin-management.desktop-optimized .table th:nth-child(5) { width: 180px !important; } /* Last modified */
+  .plugin-management.desktop-optimized .table th:nth-child(6) { width: 140px !important; } /* Actions */
+
+  /* Better spacing for desktop */
+  .plugin-management.desktop-optimized .card {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
+    border-radius: 12px !important;
+  }
+
+  .plugin-management.desktop-optimized .table td {
+    padding: 16px 12px !important; /* More generous padding */
+    vertical-align: middle !important;
+  }
+
+  .plugin-management.desktop-optimized .table th {
+    padding: 16px 12px !important;
+    font-weight: 600 !important;
+  }
+}
+
+/* Specific fix for chat page to not interfere with other pages */
+.chat-container {
+  /* Chat has its own scroll handling, don't override */
+}
+
+/* Debug helper - remove in production */
+.mobile-scroll-debug {
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  background: rgba(255, 0, 0, 0.8);
+  color: white;
+  padding: 4px 8px;
+  font-size: 12px;
+  z-index: 9999;
+  border-radius: 4px;
+}
+
+@media (min-width: 768px) {
+  .mobile-scroll-debug {
+    display: none;
+  }
+}

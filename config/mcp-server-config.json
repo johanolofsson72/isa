@@ -1,0 +1,194 @@
+{
+  "mcpServers": {
+    "isa-accounting-agent": {
+      "command": "docker",
+      "args": [
+        "exec",
+        "-i",
+        "isa_agent",
+        "dotnet",
+        "/app/Agent.dll"
+      ],
+      "env": {
+        "ASPNETCORE_ENVIRONMENT": "Production",
+        "ASPNETCORE_URLS": "https://0.0.0.0:7042;http://0.0.0.0:5042"
+      },
+      "cwd": "/mnt/hot/docker/isa",
+      "transport": {
+        "type": "http",
+        "url": "https://mcp.example.com/mcp",
+        "headers": {
+          "Content-Type": "application/json",
+          "User-Agent": "Augment-Code-MCP-Client/1.0",
+          "X-Client-Name": "Augment Code",
+          "X-Client-Version": "1.0.0"
+        },
+        "timeout": 30000,
+        "retries": 3
+      },
+      "capabilities": {
+        "tools": true,
+        "resources": true,
+        "prompts": true,
+        "logging": true,
+        "streaming": true
+      },
+      "description": "ISA Accounting Agent - Hybrid MCP server with 47 individual tools + intelligent execute_task agent for natural language commands",
+      "version": "1.0.0",
+      "author": "ISA Team",
+      "license": "MIT",
+      "homepage": "https://mcp.example.com",
+      "repository": "https://github.com/MasterOfApps/accountingagent",
+      "keywords": [
+        "accounting",
+        "automation",
+        "mcp",
+        "plugins",
+        "dynamic-discovery",
+        "ai-agent",
+        "hybrid-architecture",
+        "natural-language",
+        "execute-task",
+        "invoicing",
+        "planning"
+      ],
+      "categories": [
+        "business",
+        "automation",
+        "productivity",
+        "ai"
+      ],
+      "security": {
+        "requiresAuth": false,
+        "allowedOrigins": [
+          "https://augmentcode.com",
+          "https://*.augmentcode.com",
+          "vscode://",
+          "https://github.com",
+          "https://copilot.github.com"
+        ],
+        "rateLimiting": {
+          "enabled": true,
+          "requestsPerMinute": 100,
+          "burstLimit": 20
+        }
+      },
+      "endpoints": {
+        "mcp": "https://mcp.example.com/mcp",
+        "capabilities": "https://mcp.example.com/api/mcp/capabilities",
+        "tools": "https://mcp.example.com/api/mcp/tools",
+        "health": "https://mcp.example.com/health",
+        "stats": "https://mcp.example.com/api/mcp/stats"
+      },
+      "healthCheck": {
+        "enabled": true,
+        "url": "https://mcp.example.com/health",
+        "interval": 30000,
+        "timeout": 5000,
+        "retries": 3
+      },
+      "monitoring": {
+        "enabled": true,
+        "metrics": {
+          "endpoint": "https://mcp.example.com/metrics",
+          "format": "prometheus"
+        },
+        "logging": {
+          "level": "Information",
+          "structured": true,
+          "includeScopes": true
+        }
+      },
+      "clients": {
+        "augment-code": {
+          "enabled": true,
+          "priority": 1,
+          "settings": {
+            "realTimeSync": true,
+            "deepIntegration": true,
+            "contextAware": true
+          }
+        },
+        "vscode": {
+          "enabled": true,
+          "priority": 2,
+          "extensionId": "modelcontextprotocol.mcp",
+          "settings": {
+            "autoConnect": true,
+            "showNotifications": true
+          }
+        },
+        "github-copilot": {
+          "enabled": true,
+          "priority": 3,
+          "integration": "mcp-protocol",
+          "settings": {
+            "contextAware": true,
+            "suggestionMode": "enhanced"
+          }
+        },
+        "claude-desktop": {
+          "enabled": true,
+          "priority": 4,
+          "integration": "mcp-protocol",
+          "settings": {
+            "contextSharing": true
+          }
+        }
+      }
+    }
+  },
+  "globalSettings": {
+    "mcpVersion": "2024-11-05",
+    "protocolVersion": "1.0.0",
+    "defaultTimeout": 30000,
+    "maxRetries": 3,
+    "logLevel": "info",
+    "compression": {
+      "enabled": true,
+      "algorithm": "gzip",
+      "level": 6
+    },
+    "security": {
+      "validateCertificates": true,
+      "allowSelfSigned": false,
+      "encryptionRequired": true,
+      "corsEnabled": true,
+      "allowedMethods": ["GET", "POST", "OPTIONS"],
+      "allowedHeaders": ["Content-Type", "Authorization", "X-Session-Id", "User-Agent", "X-Client-Name"]
+    },
+    "performance": {
+      "connectionPooling": true,
+      "keepAlive": true,
+      "maxConcurrentConnections": 10,
+      "requestQueueLimit": 100
+    },
+    "fallback": {
+      "enabled": true,
+      "retryDelay": 1000,
+      "maxRetryDelay": 10000,
+      "backoffMultiplier": 2.0
+    }
+  },
+  "deployment": {
+    "environment": "production",
+    "region": "eu-north-1",
+    "loadBalancer": {
+      "enabled": true,
+      "algorithm": "round-robin",
+      "healthCheckPath": "/health"
+    },
+    "ssl": {
+      "enabled": true,
+      "certificate": "letsencrypt",
+      "redirectHttp": true,
+      "hsts": true
+    },
+    "scaling": {
+      "minInstances": 1,
+      "maxInstances": 3,
+      "targetCpu": 70,
+      "targetMemory": 80
+    }
+  }
+}

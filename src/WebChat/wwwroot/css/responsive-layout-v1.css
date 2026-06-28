@@ -1,0 +1,259 @@
+/* Responsive Layout System (v1) - Full width utilization */
+
+/* Remove any artificial width constraints */
+.card,
+.workflow-card,
+.plugin-card,
+.history-card,
+.scheduled-task-card {
+  width: 100%;
+  max-width: none !important;
+}
+
+/* Responsive Grid System */
+.responsive-grid {
+  display: grid;
+  gap: 1rem;
+  width: 100%;
+}
+
+/* Mobile First - 1 column */
+.workflows-list,
+.history-list,
+.calendar-grid,
+.task-calendar {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+  width: 100%;
+}
+
+/* Tablet - 2 columns */
+@media (min-width: 768px) {
+  .workflows-list,
+  .history-list,
+  .calendar-grid,
+  .task-calendar {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.5rem;
+  }
+}
+
+/* Desktop - 3 columns */
+@media (min-width: 1024px) {
+  .workflows-list,
+  .history-list,
+  .calendar-grid,
+  .task-calendar {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+/* Large Desktop - 4 columns */
+@media (min-width: 1400px) {
+  .workflows-list,
+  .history-list,
+  .calendar-grid,
+  .task-calendar {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+/* Plugin Management Specific Responsive Layout */
+.plugin-management .row {
+  display: grid !important;
+  gap: 1.5rem;
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 768px) {
+  .plugin-management .row {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 1024px) {
+  .plugin-management .row {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (min-width: 1400px) {
+  .plugin-management .row {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+/* Override Bootstrap column classes for plugin management */
+.plugin-management .col-md-6,
+.plugin-management .col-md-4,
+.plugin-management .col-lg-4 {
+  width: 100% !important;
+  max-width: none !important;
+  flex: none !important;
+}
+
+/* Plugin cards should expand to fill available space */
+.plugin-card {
+  height: auto;
+  min-height: 200px;
+  display: flex;
+  flex-direction: column;
+}
+
+.plugin-card .card-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+/* Workflow cards responsive height */
+.workflow-card {
+  min-height: 180px;
+  display: flex;
+  flex-direction: column;
+}
+
+.workflow-card .card-body {
+  flex: 1;
+}
+
+/* History cards responsive height */
+.history-card {
+  min-height: 160px;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Scheduled task cards responsive height */
+.scheduled-task-card {
+  min-height: 160px;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Ensure content containers use full width */
+.container-fluid,
+.container {
+  width: 100%;
+  max-width: none;
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
+@media (min-width: 768px) {
+  .container-fluid,
+  .container {
+    padding-left: 2rem;
+    padding-right: 2rem;
+  }
+}
+
+/* Chat interface responsive adjustments */
+.chat-container {
+  width: 100%;
+  max-width: none;
+}
+
+/* Stats panel responsive */
+.stats-panel {
+  width: 100%;
+}
+
+@media (min-width: 768px) {
+  .stats-panel {
+    min-width: 250px;
+    max-width: 300px;
+  }
+}
+
+/* Form elements responsive */
+.form-control,
+.form-select {
+  width: 100%;
+}
+
+/* Button groups responsive */
+.btn-group {
+  width: 100%;
+  flex-wrap: wrap;
+}
+
+@media (min-width: 768px) {
+  .btn-group {
+    width: auto;
+    flex-wrap: nowrap;
+  }
+}
+
+/* Table responsive */
+.table-responsive {
+  width: 100%;
+  overflow-x: auto;
+}
+
+/* Modal responsive */
+.modal-dialog {
+  width: 95%;
+  max-width: none;
+  margin: 1rem auto;
+}
+
+@media (min-width: 768px) {
+  .modal-dialog {
+    width: 80%;
+    max-width: 800px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .modal-dialog {
+    width: 60%;
+    max-width: 1000px;
+  }
+}
+
+/* Navigation responsive */
+.navbar-nav {
+  width: 100%;
+}
+
+@media (min-width: 768px) {
+  .navbar-nav {
+    width: auto;
+  }
+}
+
+/* Utility classes for responsive spacing */
+.p-responsive {
+  padding: 0.5rem;
+}
+
+@media (min-width: 768px) {
+  .p-responsive {
+    padding: 1rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .p-responsive {
+    padding: 1.5rem;
+  }
+}
+
+.m-responsive {
+  margin: 0.5rem;
+}
+
+@media (min-width: 768px) {
+  .m-responsive {
+    margin: 1rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .m-responsive {
+    margin: 1.5rem;
+  }
+}

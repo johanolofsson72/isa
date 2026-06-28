@@ -1,0 +1,94 @@
+@inject IJSRuntime JSRuntime
+@using Microsoft.JSInterop
+@implements IAsyncDisposable
+
+<div class="theme-toggle">
+    <button @onclick="ToggleTheme" class="theme-toggle-btn" title="@(IsDarkTheme ? "Byt till ljust läge" : "Byt till mörkt läge")">
+        @if (IsDarkTheme)
+        {
+            <span class="nav-icon bi bi-sun-fill"></span>
+            <span class="nav-text">Ljust</span>
+        }
+        else
+        {
+            <span class="nav-icon bi bi-moon-fill"></span>
+            <span class="nav-text">Mörkt</span>
+        }
+    </button>
+</div>
+
+@code {
+    private bool IsDarkTheme { get; set; }
+    private DotNetObjectReference<ThemeToggle>? _objRef;
+    private bool _isRendered = false;
+    
+    protected override void OnInitialized()
+    {
+        _objRef = DotNetObjectReference.Create(this);
+    }
+    
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _isRendered = true;
+            try
+            {
+                // Kontrollera om dark mode är aktiv
+                IsDarkTheme = await JSRuntime.InvokeAsync<bool>("isDarkMode");
+                StateHasChanged();
+            }
+            catch (JSException)
+            {
+                // JavaScript function might not be available, use default
+                IsDarkTheme = false;
+            }
+        }
+    }
+    
+    private async Task ToggleTheme()
+    {
+        if (!_isRendered) return;
+        
+        IsDarkTheme = !IsDarkTheme;
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("toggleTheme", IsDarkTheme);
+        }
+        catch (JSException)
+        {
+            // Handle JS errors gracefully
+        }
+    }
+    
+    [JSInvokable]
+    public void OnSystemThemeChanged(bool isDark)
+    {
+        IsDarkTheme = isDark;
+        StateHasChanged();
+    }
+    
+    public async ValueTask DisposeAsync()
+    {
+        if (_objRef != null && _isRendered)
+        {
+            try
+            {
+                await JSRuntime.InvokeVoidAsync("unregisterThemeToggle");
+            }
+            catch (JSException)
+            {
+                // Handle JS errors gracefully during disposal
+            }
+            catch (JSDisconnectedException)
+            {
+                // Handle JS disconnection gracefully during disposal
+            }
+            catch (Exception)
+            {
+                // Handle any other errors gracefully during disposal
+            }
+            _objRef.Dispose();
+        }
+    }
+}

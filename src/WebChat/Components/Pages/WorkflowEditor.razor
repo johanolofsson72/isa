@@ -1,0 +1,570 @@
+@page "/workflows/create"
+@page "/workflows/edit/{Id}"
+@using WebChat.Services
+@using static WebChat.Services.WorkflowService
+@inject NavigationManager NavigationManager
+@inject WorkflowService WorkflowService
+@inject IJSRuntime JS
+
+<PageTitle>@(Id == null ? "Skapa Workflow" : "Redigera Workflow") - Isa</PageTitle>
+
+<link href="css/workflow-editor-mobile.css" rel="stylesheet" />
+
+<div class="workflow-editor">
+    <div class="page-header">
+        <h1>@(Id == null ? "Skapa" : "Redigera")</h1>
+        <div>
+            <button class="btn btn-outline-secondary me-2" @onclick="Cancel" disabled="@isSaving">
+                <span class="bi bi-x"></span> Avbryt
+            </button>
+            <button class="btn btn-primary" @onclick="SaveWorkflow" disabled="@(!IsValid() || isSaving)">
+                @if (isSaving)
+                {
+                    <span class="bi bi-arrow-repeat spin me-1"></span>
+                }
+                else
+                {
+                    <span class="bi bi-check"></span>
+                }
+                Spara
+            </button>
+        </div>
+    </div>
+
+    <div class="editor-container">
+        @if (isLoading)
+        {
+            <div class="loading-state">
+                <span class="bi bi-arrow-repeat spin loading-icon"></span>
+                <p>Laddar workflow...</p>
+            </div>
+        }
+        else if (hasError)
+        {
+            <div class="error-state">
+                <span class="bi bi-exclamation-triangle-fill error-icon"></span>
+                <h3>Fel</h3>
+                <p>@errorMessage</p>
+                <button class="btn btn-primary" @onclick="() => LoadWorkflow(Id ?? string.Empty)">
+                    <span class="bi bi-arrow-repeat"></span> Försök igen
+                </button>
+            </div>
+        }
+        else
+        {
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="workflow-name">Namn</label>
+                    <input type="text" id="workflow-name" class="form-control" @bind="workflow.Name" placeholder="Ange workflow-namn" />
+                    @if (showValidation && string.IsNullOrWhiteSpace(workflow.Name))
+                    {
+                        <div class="validation-message">Namn krävs</div>
+                    }
+                </div>
+
+                <div class="form-group">
+                    <label for="workflow-description">Beskrivning</label>
+                    <textarea id="workflow-description" class="form-control" @bind="workflow.Description" placeholder="Ange workflow-beskrivning" rows="3"></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label for="workflow-type">Körningstyp</label>
+                    <select id="workflow-type" class="form-select" @bind="workflow.ExecutionType">
+                        <option value="manual">Manuell</option>
+                        <option value="scheduled">Schemalagd</option>
+                    </select>
+                </div>
+
+                @if (workflow.ExecutionType == "scheduled")
+                {
+                    <div class="form-group">
+                        <label for="schedule-preset">Schema</label>
+                        <select id="schedule-preset" class="form-select" @bind="selectedSchedulePreset" @bind:after="OnSchedulePresetChanged">
+                            <option value="">Välj ett förinställt schema</option>
+                            <option value="daily-9am">Dagligen kl 09:00 UTC (11:00 svensk sommartid)</option>
+                            <option value="weekdays-9am">Vardagar kl 09:00 UTC (11:00 svensk sommartid)</option>
+                            <option value="weekly-monday-9am">Varje måndag kl 09:00 UTC (11:00 svensk sommartid)</option>
+                            <option value="monthly-1st-9am">Första dagen varje månad kl 09:00 UTC (11:00 svensk sommartid)</option>
+                            <option value="custom">Anpassat CRON-uttryck</option>
+                        </select>
+                    </div>
+
+                    @if (selectedSchedulePreset == "custom" || !string.IsNullOrEmpty(workflow.Schedule))
+                    {
+                        <div class="form-group">
+                            <label for="workflow-schedule">CRON-uttryck</label>
+                            <input type="text" id="workflow-schedule" class="form-control" @bind="workflow.Schedule" placeholder="Ange CRON-uttryck (t.ex. 0 9 * * 1-5)" />
+                            <div class="form-text">
+                                Format: minut timme dag månad veckodag (UTC-tid)
+                                <br />
+                                Exempel: "0 9 * * 1-5" = Vardagar kl 09:00 UTC (11:00 svensk sommartid)
+                            </div>
+                            @if (showValidation && workflow.ExecutionType == "scheduled" && string.IsNullOrWhiteSpace(workflow.Schedule))
+                            {
+                                <div class="validation-message">Schema krävs för schemalagda workflows</div>
+                            }
+                        </div>
+                    }
+
+                    @if (!string.IsNullOrEmpty(workflow.Schedule))
+                    {
+                        <div class="form-group">
+                            <div class="schedule-preview">
+                                <span class="bi bi-clock"></span>
+                                <span>Nästa körning: @GetNextExecutionTime()</span>
+                            </div>
+                        </div>
+                    }
+
+                    <div class="form-group">
+                        <label for="workflow-enabled">Aktiverad</label>
+                        <div class="form-check">
+                            <input type="checkbox" id="workflow-enabled" class="form-check-input" @bind="workflow.Enabled" />
+                            <label for="workflow-enabled" class="form-check-label">Aktiv</label>
+                        </div>
+                    </div>
+                }
+
+                <div class="form-group">
+                    <div class="row g-3">
+                        <div class="col-12 col-md-6">
+                            <label class="form-label">Workflow On Success</label>
+                            <input type="text" class="form-control" placeholder="t.ex. success-step eller completed" @bind="workflow.OnSuccess" />
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label class="form-label">Workflow On Error</label>
+                            <input type="text" class="form-control" placeholder="t.ex. error-step eller failed" @bind="workflow.OnError" />
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="workflow-steps">Workflow-steg</label>
+                    <div class="workflow-steps-container">
+                        @for (var i = 0; i < workflowSteps.Count; i++)
+                        {
+                            var index = i;
+                            var step = workflowSteps[i]; // Cache the step to avoid index issues
+                            <div class="workflow-step" @key="step">
+                                <div class="step-header">
+                                    <span class="step-number">@(i+1)</span>
+                                    <input type="text" class="form-control step-name" placeholder="Stegnamn" @bind="step.Name" />
+                                    <button class="btn btn-sm btn-outline-danger" @onclick="() => RemoveStep(index)">
+                                        <span class="bi bi-trash"></span>
+                                    </button>
+                                </div>
+                                <div class="step-content">
+                                    <textarea class="form-control" rows="3" placeholder="Steginnehåll (prompt eller instruktion)" @bind="step.Content"></textarea>
+                                    <!-- 🎯 VERKTYGSVÄLJARE BORTTAGEN: AI väljer verktyg automatiskt baserat på promptens innehåll -->
+                                    <div class="step-controls mt-2">
+                                        <div class="row g-2">
+                                            <div class="col-6 col-md-3">
+                                                <label class="form-label">Timeout (s)</label>
+                                                <input type="number" class="form-control" min="1" step="1" @bind="step.Timeout" />
+                                            </div>
+                                            <div class="col-6 col-md-3">
+                                                <label class="form-label">Retries</label>
+                                                <input type="number" class="form-control" min="0" step="1" @bind="step.Retries" />
+                                            </div>
+                                            <div class="col-12 col-md-3">
+                                                <label class="form-label">On Success</label>
+                                                <input type="text" class="form-control" placeholder="t.ex. step2 eller completed" @bind="step.OnSuccess" @bind:event="oninput" />
+                                            </div>
+                                            <div class="col-12 col-md-3">
+                                                <label class="form-label">On Error</label>
+                                                <input type="text" class="form-control" placeholder="t.ex. failed eller stepX" @bind="step.OnFailure" @bind:event="oninput" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+
+                        <button class="btn btn-outline-primary add-step" @onclick="AddStep">
+                            <span class="bi bi-plus"></span> Lägg till steg
+                        </button>
+                    </div>
+                    @if (showValidation && workflowSteps.Count == 0)
+                    {
+                        <div class="validation-message">Minst ett steg krävs</div>
+                    }
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public string? Id { get; set; }
+
+    private WorkflowModel workflow = new();
+    private List<WorkflowStep> workflowSteps = new();
+    private bool isLoading = false;
+    private bool isSaving = false;
+    private bool hasError = false;
+    private string errorMessage = "";
+    private bool showValidation = false;
+
+    // Scheduling related variables
+    private string selectedSchedulePreset = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            if (!string.IsNullOrEmpty(Id))
+            {
+                await LoadWorkflow(Id);
+            }
+            else
+            {
+                // Initialize new workflow
+                workflow = new WorkflowModel
+                {
+                    Id = Guid.NewGuid().ToString("N"),
+                    Name = "",
+                    Description = "",
+                    ExecutionType = "manual",
+                    Enabled = true,
+                    OnSuccess = string.Empty,
+                    OnError = string.Empty
+                };
+
+                // Add one empty step by default
+                workflowSteps.Add(new WorkflowStep
+                {
+                    Name = "Steg 1",
+                    Content = "",
+                    ToolName = ""
+                });
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error initializing workflow editor: {ex.Message}";
+            hasError = true;
+        }
+    }
+     protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            // Ensure mobile scrolling works on this page
+            await JS.InvokeVoidAsync("ensureMobileScrolling");
+
+            // Don't use any JavaScript on first render to avoid errors
+            try
+            {
+                // Just log to debug console instead of browser console
+                System.Diagnostics.Debug.WriteLine("WorkflowEditor: Component rendered successfully");
+            }
+            catch (Exception)
+            {
+                // Ignore all errors during first render
+            }
+        }
+    }
+
+    private async Task LoadWorkflow(string id)
+    {
+        isLoading = true;
+        hasError = false;
+
+        try
+        {
+            var loadedWorkflow = await WorkflowService.GetWorkflowAsync(id);
+            if (loadedWorkflow != null)
+            {
+                workflow = loadedWorkflow;
+
+                // Load steps from the workflow
+                workflowSteps.Clear();
+                if (loadedWorkflow.Steps != null && loadedWorkflow.Steps.Any())
+                {
+                    foreach (var step in loadedWorkflow.Steps.OrderBy(s => s.Order))
+                    {
+                        workflowSteps.Add(new WorkflowStep
+                        {
+                            Name = step.Name,
+                            Content = step.Content,
+                            // 🎯 ToolName BORTTAGET: AI väljer verktyg automatiskt
+                            Timeout = step.Timeout,
+                            Retries = step.Retries,
+                            OnSuccess = step.OnSuccess,
+                            OnFailure = step.OnFailure,
+                        });
+                    }
+                }
+                else
+                {
+                    // Add default step if no steps exist
+                    workflowSteps.Add(new WorkflowStep
+                    {
+                        Name = "Steg 1",
+                        Content = "Beskriv vad detta steg ska göra...",
+                        ToolName = "",
+                        Timeout = 300,
+                        Retries = 2,
+                        OnSuccess = string.Empty,
+                        OnFailure = string.Empty,
+                    });
+                }
+            }
+            else
+            {
+                hasError = true;
+                errorMessage = "Workflow hittades inte";
+            }
+        }
+        catch (Exception ex)
+        {
+            hasError = true;
+            errorMessage = $"Fel vid laddning av workflow: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void AddStep()
+    {
+        workflowSteps.Add(new WorkflowStep
+        {
+            Name = $"Steg {workflowSteps.Count + 1}",
+            Content = "",
+            ToolName = "",
+            Timeout = 300,
+            Retries = 2,
+            OnSuccess = string.Empty,
+            OnFailure = string.Empty,
+        });
+    }
+
+    private void RemoveStep(int index)
+    {
+        if (index >= 0 && index < workflowSteps.Count)
+        {
+            workflowSteps.RemoveAt(index);
+        }
+    }
+
+    private async Task SaveWorkflow()
+    {
+        showValidation = true;
+
+        if (!IsValid())
+            return;
+
+        // Show loading state
+        isSaving = true;
+
+        try {
+            // Create the workflow object to save
+            var workflowToSave = new WorkflowModel
+            {
+                Id = workflow.Id,
+                Name = workflow.Name,
+                Description = workflow.Description,
+                ExecutionType = workflow.ExecutionType,
+                Schedule = workflow.Schedule,
+                Enabled = workflow.Enabled,
+                OnSuccess = workflow.OnSuccess,
+                OnError = workflow.OnError,
+                Steps = workflowSteps.Select((step, index) => new WorkflowStepModel
+                {
+                    Name = step.Name,
+                    Content = step.Content,
+                    // 🎯 ToolName BORTTAGET: AI väljer verktyg automatiskt
+                    Order = index + 1,
+                    Timeout = step.Timeout,
+                    Retries = step.Retries,
+                    OnSuccess = step.OnSuccess,
+                    OnFailure = step.OnFailure,
+                }).ToList()
+            };
+
+            // Save workflow using WorkflowService
+            bool success;
+            if (string.IsNullOrEmpty(Id)) // New workflow
+            {
+                success = await WorkflowService.CreateWorkflowAsync(workflowToSave);
+            }
+            else // Edit existing workflow
+            {
+                success = await WorkflowService.UpdateWorkflowAsync(workflowToSave);
+            }
+
+            if (success)
+            {
+                // Navigate back to workflows list immediately without JavaScript
+                NavigationManager.NavigateTo("/workflows");
+            }
+            else
+            {
+                // Show error in the UI instead of JavaScript alert
+                errorMessage = "Fel vid sparande av arbetsflöde. Försök igen.";
+                hasError = true;
+            }
+        }
+        catch (Exception ex) {
+            // Show error in the UI instead of JavaScript alert
+            errorMessage = $"Fel vid sparande av arbetsflöde: {ex.Message}";
+            hasError = true;
+        }
+        finally {
+            isSaving = false;
+            StateHasChanged();
+        }
+    }
+
+    private void Cancel()
+    {
+        NavigationManager.NavigateTo("/workflows");
+    }
+
+    private bool IsValid()
+    {
+        if (string.IsNullOrWhiteSpace(workflow.Name))
+            return false;
+
+        if (workflow.ExecutionType == "scheduled" && string.IsNullOrWhiteSpace(workflow.Schedule))
+            return false;
+
+        if (workflowSteps.Count == 0)
+            return false;
+
+        return true;
+    }
+
+    private void OnSchedulePresetChanged()
+    {
+        // Map the actual option values used in the UI to CRON expressions
+        switch (selectedSchedulePreset)
+        {
+            case "daily-9am":
+                workflow.Schedule = "0 9 * * *"; // Daily at 09:00 UTC
+                break;
+            case "weekdays-9am":
+                workflow.Schedule = "0 9 * * 1-5"; // Weekdays at 09:00 UTC
+                break;
+            case "weekly-monday-9am":
+                workflow.Schedule = "0 9 * * 1"; // Mondays at 09:00 UTC
+                break;
+            case "monthly-1st-9am":
+                workflow.Schedule = "0 9 1 * *"; // First day of month at 09:00 UTC
+                break;
+            case "custom":
+                // Do not modify workflow.Schedule; user enters CRON below
+                break;
+            default:
+                // Reset when no preset is selected
+                workflow.Schedule = string.Empty;
+                break;
+        }
+        StateHasChanged();
+    }
+
+    private string GetNextExecutionTime()
+    {
+        if (string.IsNullOrEmpty(workflow.Schedule))
+            return "Ej schemalagd";
+
+        try
+        {
+            var nextTime = CalculateNextRunTime(workflow.Schedule);
+            if (nextTime.HasValue)
+            {
+                // Convert from UTC to Swedish time for display
+                var sweTime = TimeZoneInfo.ConvertTimeFromUtc(nextTime.Value, TimeZoneInfo.FindSystemTimeZoneById("W. Europe Standard Time"));
+                return $"{sweTime:yyyy-MM-dd HH:mm} (svensk tid)";
+            }
+            return "Ogiltigt schema";
+        }
+        catch
+        {
+            return "Ogiltigt schema";
+        }
+    }
+
+    // Helper method to calculate next run time from a cron expression (in UTC)
+    private DateTime? CalculateNextRunTime(string cronExpression)
+    {
+        if (string.IsNullOrEmpty(cronExpression))
+            return null;
+
+        try
+        {
+            // Parse parts
+            var parts = cronExpression.Split(' ');
+            if (parts.Length != 5)
+                return null;
+
+            var minute = parts[0];
+            var hour = parts[1];
+            var dayOfMonth = parts[2];
+            var month = parts[3];
+            var dayOfWeek = parts[4];
+
+            // Use UTC time since that's what the scheduling service uses
+            var now = DateTime.UtcNow;
+            var result = now;
+
+            // Daily at specific hour (e.g., "0 9 * * *" for 9:00 AM UTC daily)
+            if (hour != "*" && dayOfMonth == "*" && month == "*" && dayOfWeek == "*")
+            {
+                var hourValue = int.Parse(hour);
+                var minuteValue = minute == "*" ? 0 : int.Parse(minute);
+
+                result = new DateTime(now.Year, now.Month, now.Day, hourValue, minuteValue, 0, DateTimeKind.Utc);
+                if (result <= now)
+                    result = result.AddDays(1);
+
+                return result;
+            }
+
+            // Weekdays (e.g., "0 9 * * 1-5" for 9:00 AM UTC Monday-Friday)
+            if (dayOfWeek == "1-5")
+            {
+                var hourValue = int.Parse(hour);
+                var minuteValue = minute == "*" ? 0 : int.Parse(minute);
+
+                result = new DateTime(now.Year, now.Month, now.Day, hourValue, minuteValue, 0, DateTimeKind.Utc);
+
+                // If today is weekend or time has passed, find next weekday
+                if (now.DayOfWeek == DayOfWeek.Saturday)
+                    result = result.AddDays(2); // Next Monday
+                else if (now.DayOfWeek == DayOfWeek.Sunday)
+                    result = result.AddDays(1); // Next Monday
+                else if (result <= now)
+                {
+                    // Add one day, and if it's Saturday, add 2 more
+                    result = result.AddDays(1);
+                    if (result.DayOfWeek == DayOfWeek.Saturday)
+                        result = result.AddDays(2);
+                }
+
+                return result;
+            }
+
+            // For more complex expressions, fall back to tomorrow at same time
+            return now.AddDays(1);
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private class WorkflowStep
+    {
+        public string Name { get; set; } = string.Empty;
+        public string Content { get; set; } = string.Empty;
+        public string ToolName { get; set; } = string.Empty;
+        public int Timeout { get; set; } = 300;
+        public int Retries { get; set; } = 2;
+        public string? OnSuccess { get; set; } = string.Empty;
+        public string? OnFailure { get; set; } = string.Empty;
+    }
+}

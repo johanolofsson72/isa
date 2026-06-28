@@ -1,0 +1,59 @@
+/* Dark mode fixes for Plugin Management (v2) */
+
+/* Use app CSS variables so dark-theme toggling applies */
+.plugin-card {
+  background: var(--card-bg) !important;
+  border-color: var(--border-color) !important;
+  color: var(--text-color) !important;
+}
+
+.plugin-card.enabled {
+  border-color: var(--success-color) !important;
+  background: linear-gradient(135deg, color-mix(in oklab, var(--success-color) 10%, transparent) 0%, transparent 100%) !important;
+}
+
+.plugin-card.disabled {
+  border-color: var(--secondary-color) !important;
+  background: linear-gradient(135deg, color-mix(in oklab, var(--secondary-color) 10%, transparent) 0%, transparent 100%) !important;
+}
+
+.plugin-title,
+.plugin-description,
+.plugin-feature,
+.plugin-stat,
+.page-title,
+.page-description {
+  color: var(--text-color) !important;
+}
+
+.functions-list,
+.summary-section {
+  background: rgba(255,255,255,0.03) !important;
+  border: 1px solid var(--border-color) !important;
+}
+
+/* Buttons and badges respect theme */
+.plugin-toggle .form-check-input:checked {
+  background-color: var(--success-color);
+  border-color: var(--success-color);
+}
+
+.badge.bg-primary { background-color: var(--primary-color) !important; }
+.badge.bg-success { background-color: var(--success-color) !important; }
+.badge.bg-secondary { background-color: var(--secondary-color) !important; }
+
+/* Tables within plugin pages */
+.table {
+  color: var(--text-color);
+}
+.table thead th { border-bottom-color: var(--border-color); }
+.table tbody td { border-top-color: var(--border-color); }
+.table-striped tbody tr:nth-of-type(odd) { background-color: rgba(255,255,255,0.03); }
+
+/* Links */
+.plugin-card a { color: var(--primary-color); }
+
+
+.dark-theme .table-light{background-color:var(--bg-secondary-color)!important;color:var(--text-color)!important}
+.dark-theme .table-hover tbody tr:hover{background-color:rgba(255,255,255,0.06)!important}
+.dark-theme .card .card-header{background:var(--bg-secondary-color);border-bottom:1px solid var(--border-color)}

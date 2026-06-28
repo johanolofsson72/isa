@@ -1,0 +1,1444 @@
+@page "/"
+@using Microsoft.JSInterop
+@using Microsoft.AspNetCore.Components.Web
+@using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.Extensions.Configuration
+@using System
+@using System.Text.Json
+@using WebChat.Services
+@using WebChat.Services.Interfaces
+@using WebChat.Endpoints
+@using Shared.Models
+@implements IAsyncDisposable
+@inject IJSRuntime JS
+@inject IConfiguration Configuration
+@inject IHttpClientFactory HttpClientFactory
+@inject ILogger<Chat> Logger
+@inject ILoggerFactory LoggerFactory
+@inject Shared.Services.IDeviceFingerprintService DeviceService
+@inject WebChat.Services.Interfaces.IMemoryQueryService MemoryService
+@inject WebChat.Services.Interfaces.ISessionFileService SessionFileService
+
+<PageTitle>Chatt - Isa</PageTitle>
+
+<div class="chat-container">
+    <div class="page-header">
+        <h1>Chatt</h1>
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+            <button @onclick="ToggleMute" class="mute-btn" title="@MuteTooltip">
+                @if (IsMuted)
+                {
+                    <span class="bi bi-volume-mute-fill" style="color: #d9534f;"></span>
+                }
+                else
+                {
+                    <span class="bi bi-volume-up-fill" style="color: #5cb85c;"></span>
+                }
+            </button>
+            <div class="connection-status">
+                @if (IsConnected)
+                {
+                    <span class="status-connected"><span class="bi bi-circle-fill"></span> Ansluten</span>
+                }
+                else
+                {
+                    <span class="status-disconnected"><span class="bi bi-circle-fill"></span> Frånkopplad</span>
+                }
+            </div>
+            <button class="btn btn-link d-lg-none" title="Visa statistik" @onclick="ToggleMobileStats">
+                <span class="bi bi-graph-up"></span>
+            </button>
+        </div>
+    </div>
+
+    <div class="chat-messages" @ref="messagesContainer" data-testid="chat-messages">
+        @if (messages.Count == 0)
+        {
+            <div class="welcome-message">
+                <span class="bi bi-robot empty-icon"></span>
+                <h2>@WelcomeMessage</h2>
+                <p>@WelcomePhrase</p>
+                <div class="welcome-actions">
+                    <a href="/docs/IsaGuide" class="btn btn-outline-primary" target="_blank">
+                        <span class="bi bi-book"></span> Dokumentation
+                    </a>
+                </div>
+            </div>
+        }
+        else
+        {
+            @foreach (var message in messages)
+            {
+                <div class="message @(message.IsUser ? "user-message" : "agent-message")">
+                    <div class="message-avatar">
+                        @if (message.IsUser)
+                        {
+                            <span class="bi bi-person-circle"></span>
+                        }
+                        else
+                        {
+                            <span class="bi bi-robot"></span>
+                        }
+                    </div>
+                    <div class="message-content">
+                        <div class="message-text">@message.Text</div>
+                        <div class="message-time">@message.Timestamp.ToString("HH:mm")</div>
+                    </div>
+                </div>
+            }
+        }
+
+        @if (isTyping)
+        {
+            <div class="message agent-message typing">
+                <div class="message-avatar">
+                    <span class="bi bi-robot"></span>
+                </div>
+                <div class="message-content">
+                    <div class="typing-indicator">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+
+    <StatsPanel CurrentMessage="@messageInput" TotalMessages="@messages.Count" Messages="@MessagesAsObjects" />
+
+    @* Mobile-only bottom sheet stats (outside typing block so toggle works) *@
+    @if (isMobileStatsOpen)
+    {
+        <div class="stats-panel mobile-open" style="z-index:2000;">
+            <div class="stats-header" @onclick="ToggleMobileStats">
+                <strong>Stats</strong>
+                <span style="margin-left:auto">Stäng</span>
+            </div>
+            <div class="stats-body">
+                <div class="stat-row"><span>Current msg</span><span>@(messageInput?.Length ?? 0) chars</span></div>
+                <div class="stat-row"><span>Messages</span><span>@messages.Count</span></div>
+                <div class="stat-row"><span>History size</span><span>@GetHistoryCharacterCount() chars</span></div>
+                <div class="stat-row"><span>Est. tokens</span><span>@GetEstimatedTokenCount()</span></div>
+            </div>
+        </div>
+    }
+
+    <div class="chat-input">
+        @* File upload area *@
+        <div class="file-upload-area @(sessionFiles.Any() ? "has-files" : "")">
+            <div class="file-upload-header">
+                <span class="file-upload-title">
+                    Uppladdade filer 
+                    @if (sessionFiles.Any())
+                    {
+                        <span class="file-count">(@sessionFiles.Count)</span>
+                    }
+                </span>
+                <InputFile OnChange="OnFileSelected" class="file-input" accept="image/*,application/pdf,.pdf,.jpg,.jpeg,.png,.gif,.bmp,.tiff,.txt,.doc,.docx,.xls,.xlsx,text/plain" @ref="fileInputRef" />
+
+                <!-- Safari desktop fallback: visible file input -->
+                <div class="safari-desktop-file-wrapper">
+                    <InputFile OnChange="OnFileSelected" class="safari-desktop-file-input" accept="image/*,application/pdf,.pdf,.jpg,.jpeg,.png,.gif,.bmp,.tiff,.txt,.doc,.docx,.xls,.xlsx,text/plain" />
+                    <div class="safari-desktop-file-overlay">
+                        <span class="bi bi-paperclip"></span>
+                        <span>Ladda upp</span>
+                    </div>
+                </div>
+
+                <!-- iOS fallback: visible file input -->
+                <div class="ios-file-wrapper">
+                    <InputFile OnChange="OnFileSelected" class="ios-file-input" accept="image/*,application/pdf,.pdf,.jpg,.jpeg,.png,.gif,.bmp,.tiff,.txt,.doc,.docx,.xls,.xlsx,text/plain" />
+                    <div class="ios-file-overlay">
+                        <span class="bi bi-paperclip"></span>
+                        <span>Ladda upp</span>
+                    </div>
+                </div>
+
+                <button @onclick="TriggerFileUpload" class="file-upload-btn" disabled="@(!IsConnected || isTyping)" title="Ladda upp fil">
+                    <span class="bi bi-paperclip"></span>
+                    <span>Ladda upp</span>
+                </button>
+            </div>
+            @if (sessionFiles.Any())
+            {
+                <div class="file-list">
+                    @foreach (var file in sessionFiles)
+                    {
+                        <div class="file-item">
+                            <div class="file-info">
+                                <span class="file-name" title="@file.FileName">@file.FileName</span>
+                                <span class="file-size">@FormatFileSize(file.FileSize)</span>
+                            </div>
+                            <button @onclick="() => DeleteFile(file.FileId)" class="file-delete-btn" title="Radera fil">
+                                <span class="bi bi-trash"></span>
+                            </button>
+                        </div>
+                    }
+                </div>
+                <div class="file-upload-help">
+                    <span class="bi bi-info-circle"></span>
+                    <span>Skriv "importera fakturan till Fortnox" för att behandla uppladdade filer</span>
+                </div>
+            }
+        </div>
+
+        <div class="input-container">
+            <div class="speech-controls">
+                <button @onclick="ToggleRecording"
+                        class="speech-button @(isRecording ? "recording" : "")"
+                        disabled="@(!IsConnected || isTyping)"
+                        title="@(isRecording ? "Stoppa inspelning" : "Starta röstinspelning")">
+                    @if (isRecording)
+                    {
+                        <span class="bi bi-record-circle-fill"></span>
+                    }
+                    else
+                    {
+                        <span class="bi bi-mic"></span>
+                    }
+                </button>
+                <button @onclick="ClearMessage"
+                        class="clear-button"
+                        disabled="@(!IsConnected || isTyping || string.IsNullOrWhiteSpace(messageInput))"
+                        title="Rensa meddelande">
+                    <span class="bi bi-trash"></span>
+                </button>
+            </div>
+            <textarea id="messageInput" @bind="messageInput" @bind:event="oninput" @onkeydown="@HandleKeyDown"
+                   placeholder="Fråga mej något..."
+                   disabled="@(!IsConnected || isTyping)"
+                   class="message-input"
+                   rows="2"
+                   @ref="messageInputRef"
+                   data-testid="chat-input"></textarea>
+            <button @onclick="SendMessageAndClear" disabled="@(!IsConnected || isTyping || string.IsNullOrWhiteSpace(messageInput))"
+                    class="send-button"
+                    data-testid="send-button">
+                <span class="bi bi-send"></span>
+            </button>
+        </div>
+
+        @if (isRecording)
+        {
+            <div class="recording-status">
+                <span class="recording-indicator"><span class="bi bi-record-circle-fill pulse"></span> Spelar in... Säg "Kör" för att skicka ditt meddelande</span>
+            </div>
+        }
+
+        @* Quick actions hidden for now *@
+        <div class="quick-actions" style="display: none;">
+            <button @onclick="async () => await SetQuickMessage(QuickMessages.SendEmails)" class="quick-btn" disabled="@(!IsConnected || isTyping)">
+                <span class="bi bi-envelope-fill"></span> Skicka 3 e-post till Agent
+            </button>
+            <button @onclick="async () => await SetQuickMessage(QuickMessages.ReadEmails)" class="quick-btn" disabled="@(!IsConnected || isTyping)">
+                <span class="bi bi-inbox-fill"></span> Läs e-post
+            </button>
+            <button @onclick="async () => await SetQuickMessage(QuickMessages.SendSms)" class="quick-btn" disabled="@(!IsConnected || isTyping)">
+                <span class="bi bi-phone-fill"></span> Skicka SMS
+            </button>
+            <button @onclick="async () => await SetQuickMessage(QuickMessages.SendTeamsMessage)" class="quick-btn" disabled="@(!IsConnected || isTyping)">
+                <span class="bi bi-chat-fill"></span> Säg hej på Teams
+            </button>
+        </div>
+    </div>
+</div>
+
+@code {
+    private ChatService? chatService;
+    private List<ChatMessage> messages = new();
+    private string messageInput = string.Empty;
+    private bool isTyping = false;
+    private bool isRecording = false;
+    private ElementReference messagesContainer;
+    private ElementReference messageInputRef;
+    private string WelcomeMessage = "Välkommen, jag heter Isa";
+    private string WelcomePhrase = "Hur kan jag hjälpa dig idag?";
+    // Ta bort flaggan lastMessageWasVoice
+
+    // File upload related fields
+    private InputFile? fileInputRef;
+    private List<SessionFileInfo> sessionFiles = new();
+    private string? currentSessionId;
+
+    public bool IsConnected => chatService?.IsConnected ?? false;
+    private bool isMobileStatsOpen = false;
+    private void ToggleMobileStats() => isMobileStatsOpen = !isMobileStatsOpen;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            // Initialize device fingerprint using shared DeviceFingerprintService
+            var deviceFingerprint = await DeviceService.GetOrCreateDeviceFingerprintAsync();
+            Logger.LogInformation("🔍 DEVICE DEBUG: Chat.razor got device fingerprint: {DeviceFingerprint}", deviceFingerprint);
+
+            // Get personal information for personalized welcome message
+            await LoadPersonalizedWelcomeAsync(deviceFingerprint);
+
+            // Initialize ChatService
+            var logger = LoggerFactory.CreateLogger<ChatService>();
+            chatService = new ChatService(HttpClientFactory, logger, DeviceService);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error during Chat initialization");
+            // Fallback: create ChatService without device fingerprint
+            var logger = LoggerFactory.CreateLogger<ChatService>();
+            chatService = new ChatService(HttpClientFactory, logger, DeviceService);
+        }
+
+        // Set up event handlers
+        chatService.OnConnected += () =>
+        {
+            InvokeAsync(() =>
+            {
+                StateHasChanged();
+            });
+        };
+
+        chatService.OnMessageReceived += async (message) =>
+        {
+            await InvokeAsync(async () =>
+            {
+                isTyping = false;
+                AddMessage("🤖 Agent", message.Text, false);
+                StateHasChanged();
+                await ScrollToBottom();
+
+                // Sätt fokus tillbaka till textrutan när Isa har svarat
+                await Task.Delay(100); // Kort delay för att säkerställa att DOM är uppdaterad
+                await JS.InvokeVoidAsync("focusMessageInput");
+
+                // TTS endast om ljudet inte är avstängt
+                if (!IsMuted)
+                {
+                    var subscriptionKey = Configuration["AzureSpeech:SubscriptionKey"];
+                    var region = Configuration["AzureSpeech:Region"];
+                    if (!string.IsNullOrWhiteSpace(subscriptionKey) && !string.IsNullOrWhiteSpace(region))
+                    {
+                        await JS.InvokeVoidAsync("speakWithAzure", message.Text, subscriptionKey, region);
+                    }
+                }
+            });
+        };
+
+        chatService.OnError += (error) =>
+        {
+            InvokeAsync(async () =>
+            {
+                isTyping = false;
+                AddMessage("❌ Fel", error, false);
+                StateHasChanged();
+
+                // Sätt fokus tillbaka till textrutan även vid fel
+                await Task.Delay(100);
+                await JS.InvokeVoidAsync("focusMessageInput");
+            });
+        };
+
+        try
+        {
+            await chatService.InitializeAsync();
+
+            // Initialize session ID and clear files (requirement: clear files when chat is opened)
+            await InitializeSessionAsync();
+
+            AddMessage("🤖 Isa", GetPersonalizedWelcomeMessage(), false);
+
+            // Sätt fokus på textrutan efter välkomstmeddelandet (säkert JSInterop)
+            await SafeInvokeJSAsync("focusMessageInput");
+
+            // Lägg till TTS för välkomstmeddelandet
+            if (!IsMuted)
+            {
+                var subscriptionKey = Configuration["AzureSpeech:SubscriptionKey"];
+                var region = Configuration["AzureSpeech:Region"];
+                if (!string.IsNullOrWhiteSpace(subscriptionKey) && !string.IsNullOrWhiteSpace(region))
+                {
+                    await SafeInvokeJSAsync("speakWithAzure", "Välkommen jag heter Isa, hur kan jag hjälpa dig idag?", subscriptionKey, region);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            AddMessage("❌ System", $"Kunde inte ansluta till Agent: {ex.Message}", false);
+            Console.WriteLine($"SignalR connection failed: {ex}");
+
+            // Sätt fokus även vid anslutningsfel (säkert JSInterop)
+            await SafeInvokeJSAsync("focusMessageInput");
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            // Prevent mobile scrolling with JavaScript (only on chat page)
+            await JS.InvokeVoidAsync("preventMobileScrollingOnChatPage");
+
+            // Show Safari desktop file input if needed
+            await JS.InvokeVoidAsync("showSafariDesktopFileInput");
+
+            // Sätt fokus på textrutan när sidan laddas
+            await Task.Delay(200); // Lite längre delay för första renderingen
+            await JS.InvokeVoidAsync("focusMessageInput");
+        }
+    }
+
+    private async Task ToggleRecording()
+    {
+        if (isRecording)
+        {
+            await StopRecording();
+        }
+        else
+        {
+            await StartRecording();
+        }
+    }
+
+    private async Task StartRecording()
+    {
+        try
+        {
+            isRecording = true;
+            StateHasChanged();
+
+            // Start speech recognition using JavaScript
+            await JS.InvokeVoidAsync("startSpeechRecognition", DotNetObjectReference.Create(this));
+        }
+        catch (Exception ex)
+        {
+            isRecording = false;
+            AddMessage("❌ Röstfel", $"Kunde inte starta röstinspelning: {ex.Message}", false);
+            StateHasChanged();
+        }
+    }
+
+    private async Task StopRecording()
+    {
+        try
+        {
+            isRecording = false;
+            StateHasChanged();
+
+            // Stop speech recognition using JavaScript
+            await JS.InvokeVoidAsync("stopSpeechRecognition");
+        }
+        catch (Exception ex)
+        {
+            AddMessage("❌ Röstfel", $"Kunde inte stoppa röstinspelning: {ex.Message}", false);
+            StateHasChanged();
+        }
+    }
+
+    [JSInvokable]
+    public async Task OnSpeechResult(string transcript)
+    {
+        messageInput = transcript;
+        StateHasChanged();
+
+        // Check if the transcript contains "execute" to auto-send
+        if (transcript.ToLowerInvariant().Contains("execute") || transcript.ToLowerInvariant().Contains("kör"))
+        {
+            // Remove "execute"/"kör" from the message
+            messageInput = transcript.Replace("execute", "", StringComparison.OrdinalIgnoreCase)
+                                   .Replace("kör", "", StringComparison.OrdinalIgnoreCase).Trim();
+            StateHasChanged();
+
+            await Task.Delay(500); // Small delay for visual feedback
+            // StopRecording will be called automatically by SendMessage()
+            await SendMessage();
+        }
+    }
+
+    [JSInvokable]
+    public void OnSpeechError(string error)
+    {
+        isRecording = false;
+        AddMessage("❌ Röstfel", $"Röstigenkänning misslyckades: {error}", false);
+        StateHasChanged();
+    }
+
+    private void ClearMessage()
+    {
+        messageInput = string.Empty;
+        StateHasChanged();
+    }
+
+
+
+    private async Task SendMessage()
+    {
+        Console.WriteLine("🔍 SEND MESSAGE DEBUG: Starting SendMessage()");
+        Console.WriteLine($"🔍 SEND MESSAGE DEBUG: messageInput='{messageInput}', IsConnected={IsConnected}");
+
+        if (string.IsNullOrWhiteSpace(messageInput) || !IsConnected)
+        {
+            Console.WriteLine("🔍 SEND MESSAGE DEBUG: Exiting early - messageInput empty or not connected");
+            return;
+        }
+
+        // Stop recording if it's active
+        if (isRecording)
+        {
+            await StopRecording();
+        }
+
+        var message = messageInput.Trim();
+
+        // Add file IDs to message if there are uploaded files
+        if (sessionFiles.Any())
+        {
+            var fileIds = string.Join(", ", sessionFiles.Select(f => f.FileId));
+            message += $"\n\n[FILER: {fileIds}]";
+            Console.WriteLine($"🔍 SEND MESSAGE DEBUG: Added file IDs to message: {fileIds}");
+        }
+
+        Console.WriteLine($"🔍 SEND MESSAGE DEBUG: Final message='{message}'");
+
+        AddMessage("Du", message, true);
+        isTyping = true;
+
+        // Clear file area immediately when sending message
+        if (sessionFiles.Any())
+        {
+            Console.WriteLine($"🔍 SEND MESSAGE DEBUG: Clearing {sessionFiles.Count} files from file area");
+            await ClearAllSessionFiles();
+            Console.WriteLine("🔍 SEND MESSAGE DEBUG: File clearing completed");
+
+            // Update mobile input position after clearing files
+            await UpdateMobileInputPosition();
+        }
+
+        StateHasChanged();
+        await ScrollToBottom();
+
+        Console.WriteLine("🔍 SEND MESSAGE DEBUG: About to send to Agent via chatService");
+
+        // Always send message to Agent
+        if (chatService is not null)
+        {
+            Console.WriteLine($"🔍 SEND MESSAGE DEBUG: Calling chatService.SendMessageAsync('{message}')");
+            await chatService.SendMessageAsync(message);
+            Console.WriteLine("🔍 SEND MESSAGE DEBUG: chatService.SendMessageAsync completed");
+
+            // Return focus to input field
+            await Task.Delay(100); // Small delay to ensure DOM is updated
+            await JS.InvokeVoidAsync("focusElement", "messageInput");
+        }
+        else
+        {
+            Console.WriteLine("🔍 SEND MESSAGE DEBUG: chatService is null!");
+        }
+
+        // File import is now handled by Agent via DocumentInterpreter - no need for separate processing
+
+        Console.WriteLine("🔍 SEND MESSAGE DEBUG: SendMessage() completed");
+
+        // keep helpers outside of hub block
+        // mobile stats panel
+        // fields are below
+
+    }
+
+    private async Task SendMessageAndClear()
+    {
+        Console.WriteLine("🔍 SEND BUTTON DEBUG: About to send message and clear input");
+        await SendMessage();
+
+        // Force clear the textarea immediately after sending
+        try
+        {
+            Console.WriteLine("🔍 SEND BUTTON DEBUG: About to clear textarea via JavaScript");
+            await JS.InvokeVoidAsync("eval", "document.getElementById('messageInput').value = '';");
+            Console.WriteLine("🔍 SEND BUTTON DEBUG: Textarea cleared via JavaScript");
+
+            // Also clear the backend variable
+            messageInput = string.Empty;
+            StateHasChanged();
+            Console.WriteLine("🔍 SEND BUTTON DEBUG: Backend variable cleared and StateHasChanged called");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"🔍 SEND BUTTON DEBUG: JavaScript clear failed: {ex.Message}");
+        }
+    }
+
+    private async Task HandleKeyDown(KeyboardEventArgs e)
+    {
+        Console.WriteLine($"KeyDown: {e.Key}, CtrlKey: {e.CtrlKey}, MetaKey: {e.MetaKey}");
+        if (e.Key == "Enter" && (e.CtrlKey || e.MetaKey))
+        {
+            // Ctrl+Enter (Windows/Linux) or Cmd+Enter (Mac) sends message
+            Console.WriteLine("🔍 CTRL/CMD+ENTER DEBUG: About to send message and clear input");
+
+            // Prevent default behavior (adding newline)
+            await JS.InvokeVoidAsync("eval", "event.preventDefault();");
+
+            // Wait for SendMessage to complete before clearing
+            await SendMessage();
+            Console.WriteLine("🔍 CTRL/CMD+ENTER DEBUG: SendMessage completed, now clearing input");
+
+            // Force clear the textarea immediately after sending
+            try
+            {
+                Console.WriteLine("🔍 CTRL/CMD+ENTER DEBUG: About to clear textarea via JavaScript");
+                await JS.InvokeVoidAsync("eval", "document.getElementById('messageInput').value = '';");
+                Console.WriteLine("🔍 CTRL/CMD+ENTER DEBUG: Textarea cleared via JavaScript");
+
+                // Also clear the backend variable
+                messageInput = string.Empty;
+                StateHasChanged();
+                Console.WriteLine("🔍 CTRL/CMD+ENTER DEBUG: Backend variable cleared and StateHasChanged called");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"🔍 CTRL/CMD+ENTER DEBUG: JavaScript clear failed: {ex.Message}");
+            }
+        }
+        // Enter without Ctrl/Cmd just adds a new line (default textarea behavior)
+    }
+
+    // File handling methods
+    private async Task InitializeSessionAsync()
+    {
+        try
+        {
+            // Get session ID (same logic as ChatService)
+            var deviceFingerprint = await DeviceService.GetOrCreateDeviceFingerprintAsync();
+            currentSessionId = $"session_{deviceFingerprint}";
+
+            // Clear session files when chat is opened (per requirement)
+            await SessionFileService.ClearSessionFilesAsync(currentSessionId);
+            Logger.LogInformation("Cleared session files for: {SessionId}", currentSessionId);
+
+            // Load current session files (should be empty after clear)
+            await LoadSessionFiles();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error initializing session");
+        }
+    }
+
+    private async Task LoadSessionFiles()
+    {
+        if (string.IsNullOrEmpty(currentSessionId))
+            return;
+
+        try
+        {
+            sessionFiles = await SessionFileService.GetSessionFilesAsync(currentSessionId);
+            StateHasChanged();
+
+            // Update mobile input position when files are loaded/changed
+            await UpdateMobileInputPosition();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading session files");
+        }
+    }
+
+    private async Task TriggerFileUpload()
+    {
+        if (fileInputRef?.Element != null)
+        {
+            await JS.InvokeVoidAsync("triggerFileInput", fileInputRef.Element);
+        }
+    }
+
+    private async Task ClearFileInput()
+    {
+        if (fileInputRef?.Element != null)
+        {
+            await JS.InvokeVoidAsync("clearFileInput", fileInputRef.Element);
+        }
+    }
+
+    private async Task OnFileSelected(InputFileChangeEventArgs e)
+    {
+        var files = e.GetMultipleFiles();
+        if (!files.Any())
+            return;
+
+        foreach (var file in files)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(currentSessionId))
+                {
+                    AddMessage("❌ System", "Session inte initialiserad", false);
+                    continue;
+                }
+
+                // Validate file size (max 10MB)
+                const long maxFileSize = 10 * 1024 * 1024; // 10MB
+                if (file.Size > maxFileSize)
+                {
+                    AddMessage("❌ System", $"Fil {file.Name} är för stor (max 10MB)", false);
+                    continue;
+                }
+
+                // Validate file type
+                var allowedTypes = new[] {
+                    "image/",
+                    "application/pdf",
+                    "text/plain",
+                    "application/msword",
+                    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                    "application/vnd.ms-excel",
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                };
+                if (!allowedTypes.Any(type => file.ContentType.StartsWith(type) || file.ContentType == type))
+                {
+                    AddMessage("❌ System", $"Filtyp {file.ContentType} stöds inte (endast bilder, PDF, text och Office-dokument)", false);
+                    continue;
+                }
+
+                Logger.LogInformation("Uploading file: {FileName} ({FileSize} bytes)", file.Name, file.Size);
+
+                // Convert IBrowserFile to IFormFile-like structure for upload
+                var fileId = await SessionFileService.UploadFileAsync(currentSessionId, new FormFileWrapper(file));
+
+                AddMessage("📎 System", $"Fil uppladdad: {file.Name} ({FormatFileSize(file.Size)})", false);
+                await LoadSessionFiles();
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Error uploading file: {FileName}", file.Name);
+                AddMessage("❌ System", $"Kunde inte ladda upp fil {file.Name}: {ex.Message}", false);
+            }
+        }
+
+        // Clear the file input after all files have been processed
+        await ClearFileInput();
+    }
+
+    private async Task DeleteFile(string fileId)
+    {
+        if (string.IsNullOrEmpty(currentSessionId))
+            return;
+
+        try
+        {
+            var deleted = await SessionFileService.DeleteFileAsync(currentSessionId, fileId);
+            if (deleted)
+            {
+                AddMessage("🗑️ System", "Fil raderad", false);
+                await LoadSessionFiles();
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error deleting file: {FileId}", fileId);
+            AddMessage("❌ System", $"Kunde inte radera fil: {ex.Message}", false);
+        }
+    }
+
+    private async Task ClearAllSessionFiles()
+    {
+        if (string.IsNullOrEmpty(currentSessionId))
+            return;
+
+        try
+        {
+            Console.WriteLine($"🔍 CLEAR FILES DEBUG: Clearing {sessionFiles.Count} session files");
+
+            // Clear the local list first for immediate UI update
+            sessionFiles.Clear();
+            Console.WriteLine("🔍 CLEAR FILES DEBUG: Local sessionFiles list cleared");
+
+            // Force immediate UI update
+            await InvokeAsync(StateHasChanged);
+            Console.WriteLine("🔍 CLEAR FILES DEBUG: StateHasChanged called via InvokeAsync - UI should now show empty file area");
+
+            // Update mobile input position after clearing files
+            await UpdateMobileInputPosition();
+
+            // Then delete files from the backend (this can happen in background)
+            var filesToDelete = await SessionFileService.GetSessionFilesAsync(currentSessionId);
+            foreach (var file in filesToDelete)
+            {
+                await SessionFileService.DeleteFileAsync(currentSessionId, file.FileId);
+                Console.WriteLine($"🔍 CLEAR FILES DEBUG: Deleted file {file.FileName} ({file.FileId}) from backend");
+            }
+
+            Console.WriteLine("🔍 CLEAR FILES DEBUG: All files cleared from both UI and backend");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error clearing session files");
+            Console.WriteLine($"🔍 CLEAR FILES DEBUG: Error clearing files: {ex.Message}");
+        }
+    }
+
+    private string FormatFileSize(long bytes)
+    {
+        const int unit = 1024;
+        if (bytes < unit) return $"{bytes} B";
+        int exp = (int)(Math.Log(bytes) / Math.Log(unit));
+        return $"{bytes / Math.Pow(unit, exp):F1} {("KMGTPE")[exp - 1]}B";
+    }
+
+    private async Task UpdateMobileInputPosition()
+    {
+        try
+        {
+            var hasFiles = sessionFiles.Any();
+            Console.WriteLine($"🔍 MOBILE INPUT DEBUG: Updating position, hasFiles={hasFiles}");
+
+            if (hasFiles)
+            {
+                await JS.InvokeVoidAsync("addClass", "chat-input", "has-files");
+                await JS.InvokeVoidAsync("addClass", "chat-messages", "has-files");
+                Console.WriteLine("🔍 MOBILE INPUT DEBUG: Added has-files class to chat-input and chat-messages");
+            }
+            else
+            {
+                await JS.InvokeVoidAsync("removeClass", "chat-input", "has-files");
+                await JS.InvokeVoidAsync("removeClass", "chat-messages", "has-files");
+                Console.WriteLine("🔍 MOBILE INPUT DEBUG: Removed has-files class from chat-input and chat-messages");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"🔍 MOBILE INPUT DEBUG: Error updating position: {ex.Message}");
+        }
+    }
+
+    // Check if message contains file import command
+    private bool IsFileImportCommand(string message)
+    {
+        var lowerMessage = message.ToLowerInvariant();
+
+        // Swedish variants
+        if (lowerMessage.Contains("importera") && (lowerMessage.Contains("faktura") || lowerMessage.Contains("fil")))
+            return true;
+
+        if (lowerMessage.Contains("behandla") && lowerMessage.Contains("fil"))
+            return true;
+
+        if (lowerMessage.Contains("ladda") && lowerMessage.Contains("faktura") && lowerMessage.Contains("fortnox"))
+            return true;
+
+        // Document interpretation commands
+        if ((lowerMessage.Contains("tolka") || lowerMessage.Contains("kolla") || lowerMessage.Contains("undersök")) &&
+            (lowerMessage.Contains("fil") || lowerMessage.Contains("dokument")))
+            return true;
+
+        // English variants
+        if (lowerMessage.Contains("import") && (lowerMessage.Contains("invoice") || lowerMessage.Contains("file")))
+            return true;
+
+        if (lowerMessage.Contains("process") && lowerMessage.Contains("file"))
+            return true;
+
+        if ((lowerMessage.Contains("interpret") || lowerMessage.Contains("analyze")) &&
+            (lowerMessage.Contains("file") || lowerMessage.Contains("document")))
+            return true;
+
+        return false;
+    }
+
+    // Handle file import workflow
+    private async Task HandleFileImportAsync(string originalMessage)
+    {
+        if (string.IsNullOrEmpty(currentSessionId) || !sessionFiles.Any())
+        {
+            isTyping = false;
+            AddMessage("❌ System", "Inga filer att importera", false);
+            StateHasChanged();
+            return;
+        }
+
+        try
+        {
+            // Get the first file (as per requirement: "take the file regardless of name")
+            var fileToImport = sessionFiles.First();
+
+            AddMessage("🔄 System", $"Startar import av {fileToImport.FileName}...", false);
+            StateHasChanged();
+
+            // Step 1: Create FileRecord for the Agent
+            var fileRecord = new FileRecord
+            {
+                Id = Guid.Parse(fileToImport.FileId),
+                FileName = fileToImport.FileName,
+                FilePath = fileToImport.FilePath,
+                ContentType = fileToImport.ContentType,
+                FileSize = fileToImport.FileSize,
+                Source = "WebChat Upload",
+                SourcePath = fileToImport.FileName,
+                CreatedAt = fileToImport.UploadedAt
+            };
+
+            // Step 2: Send to Agent for document processing
+            AddMessage("📄 System", "Skickar till dokumenttolk...", false);
+            StateHasChanged();
+
+            var agentClient = HttpClientFactory.CreateClient("agent");
+            var json = JsonSerializer.Serialize(fileRecord);
+            var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
+
+            var processResponse = await agentClient.PostAsync("/api/documents/process", content);
+            
+            if (!processResponse.IsSuccessStatusCode)
+            {
+                throw new Exception($"Document processing failed: {processResponse.StatusCode}");
+            }
+
+            var processResult = await processResponse.Content.ReadAsStringAsync();
+            Logger.LogInformation("Document processing started: {Result}", processResult);
+
+            // Step 3: Wait for processing to complete and get results
+            AddMessage("⏳ System", "Väntar på dokumentanalys...", false);
+            StateHasChanged();
+
+            await Task.Delay(3000); // Give time for processing
+
+            var analysisResponse = await agentClient.GetAsync($"/api/documents/analysis/{fileToImport.FileId}");
+            
+            if (analysisResponse.IsSuccessStatusCode)
+            {
+                var analysisResult = await analysisResponse.Content.ReadAsStringAsync();
+                Logger.LogInformation("Document analysis completed: {Result}", analysisResult);
+
+                // Step 4: Send analysis result to regular chat for Fortnox processing
+                AddMessage("💼 System", "Dokumentanalys klar, skickar till Fortnox...", false);
+                StateHasChanged();
+
+                // Send the analysis to the chat system with Fortnox instruction
+                var fortnoxInstruction = $"Här är resultatet från dokumentanalys av {fileToImport.FileName}. Skapa leverantörsfaktura i Fortnox med denna information: {analysisResult}";
+                
+                if (chatService is not null)
+                {
+                    await chatService.SendMessageAsync(fortnoxInstruction);
+                }
+
+                // Step 5: Remove the file on success
+                await SessionFileService.DeleteFileAsync(currentSessionId, fileToImport.FileId);
+                await LoadSessionFiles();
+
+                isTyping = false;
+                AddMessage("✅ System", $"Import av {fileToImport.FileName} slutförd och fil raderad automatiskt", false);
+                StateHasChanged();
+            }
+            else
+            {
+                throw new Exception("Document analysis not ready or failed");
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error during file import");
+            isTyping = false;
+            AddMessage("❌ System", $"Import misslyckades: {ex.Message}. Filen behålls för manuell hantering.", false);
+            StateHasChanged();
+        }
+    }
+
+
+    private void AddMessage(string sender, string message, bool isUser)
+    {
+        messages.Add(new ChatMessage
+        {
+            Sender = sender,
+            Text = message,
+            IsUser = isUser,
+            Timestamp = DateTime.Now
+        });
+    }
+
+    private int GetHistoryCharacterCount()
+    {
+        return messages.Sum(m => m.Text?.Length ?? 0);
+    }
+
+    private int GetEstimatedTokenCount()
+    {
+        var totalChars = GetHistoryCharacterCount() + (messageInput?.Length ?? 0);
+        return (int)Math.Round(totalChars / 4.0); // 4 chars per token as requested
+    }
+
+    private List<object> MessagesAsObjects => messages.Cast<object>().ToList();
+
+    private async Task SetQuickMessage(string message)
+    {
+        messageInput = message;
+        StateHasChanged();
+
+        // Sätt fokus på textrutan efter att ha satt quick message
+        await Task.Delay(50);
+        await JS.InvokeVoidAsync("focusMessageInput");
+    }
+
+    private async Task ScrollToBottom()
+    {
+        await Task.Delay(50); // Small delay to ensure DOM is updated
+        await JS.InvokeVoidAsync("scrollToBottom", messagesContainer);
+    }
+
+    public ValueTask DisposeAsync()
+    {
+        // ChatService doesn't need disposal for REST API
+        return ValueTask.CompletedTask;
+    }
+
+    // Personal information for welcome message personalization
+    private string? _userFirstName;
+    private string? _userDisplayName;
+
+    /// <summary>
+    /// Load personal information and customize welcome messages
+    /// </summary>
+    private async Task LoadPersonalizedWelcomeAsync(string deviceFingerprint)
+    {
+        // Set default messages first
+        WelcomeMessage = "Välkommen, jag heter Isa";
+        WelcomePhrase = "Hur kan jag hjälpa dig idag?";
+
+        try
+        {
+            // Skip personalization if device fingerprint is a fallback
+            if (deviceFingerprint.StartsWith("fallback-") || deviceFingerprint.StartsWith("error-"))
+            {
+                Logger.LogDebug("Using fallback device fingerprint, skipping personalization");
+                return;
+            }
+
+            var personalInfo = await MemoryService.GetPersonalInfoAsync(deviceFingerprint);
+
+            if (personalInfo != null && !string.IsNullOrEmpty(personalInfo.FirstName))
+            {
+                _userFirstName = personalInfo.FirstName;
+                _userDisplayName = personalInfo.DisplayName;
+
+                // Personalize welcome messages
+                WelcomeMessage = $"Välkommen tillbaka, {_userFirstName}!";
+                WelcomePhrase = "Vad kan jag hjälpa dig med idag?";
+
+                Logger.LogInformation("Personalized welcome for user: {FirstName}", _userFirstName);
+            }
+            else
+            {
+                Logger.LogDebug("No personal info found, using default welcome message");
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "Error loading personalized welcome message, using defaults");
+        }
+    }
+
+
+
+
+
+    /// <summary>
+    /// Get personalized welcome message for chat
+    /// </summary>
+    private string GetPersonalizedWelcomeMessage()
+    {
+        if (!string.IsNullOrEmpty(_userFirstName))
+        {
+            return $"Hej {_userFirstName}! Vad kan jag hjälpa dig med idag?";
+        }
+
+        return "Välkommen jag heter Isa, hur kan jag hjälpa dig idag?";
+    }
+
+
+
+    /// <summary>
+    /// Safely invoke JavaScript without causing JSInterop errors
+    /// </summary>
+    private async Task SafeInvokeJSAsync(string identifier, params object[] args)
+    {
+        try
+        {
+            await Task.Delay(100); // Small delay to ensure DOM is ready
+            await JS.InvokeVoidAsync(identifier, args);
+        }
+        catch (JSDisconnectedException)
+        {
+            Logger.LogDebug("JSInterop call skipped - circuit disconnected: {Identifier}", identifier);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "JSInterop call failed: {Identifier}", identifier);
+        }
+    }
+
+    /// <summary>
+    /// Safely invoke JavaScript with return value without causing JSInterop errors
+    /// </summary>
+    private async Task<T> SafeInvokeJSAsync<T>(string identifier, params object[] args)
+    {
+        try
+        {
+            await Task.Delay(100); // Small delay to ensure DOM is ready
+            return await JS.InvokeAsync<T>(identifier, args);
+        }
+        catch (JSException ex)
+        {
+            Logger.LogWarning("JavaScript call failed: {Error}", ex.Message);
+            return default(T)!;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Unexpected error during JavaScript call");
+            return default(T)!;
+        }
+    }
+
+    public static class QuickMessages
+    {
+        public const string SendEmails = "Kan du skicka tre stycken mail till Agent med rubrikerna 'Hej!', 'Hur mår du idag?' och 'Tack för att du är så fantastisk!'?";
+        public const string ReadEmails = "Kan du läsa av mailen åt Agent och sammanfatta detta i ett tydligt och proffsigt mail?";
+        public const string SendSms = "Kan du skicka ett sms med texten 'Hej, hur mår du idag?'?";
+        public const string SendTeamsMessage = "Säg hej på Teams";
+    }
+
+    public class ChatMessage
+    {
+        public string Sender { get; set; } = string.Empty;
+        public string Text { get; set; } = string.Empty;
+        public bool IsUser { get; set; }
+        public DateTime Timestamp { get; set; }
+    }
+
+    [CascadingParameter] public bool IsMuted { get; set; }
+    [CascadingParameter(Name = "IsMutedChanged")] public EventCallback<bool> IsMutedChanged { get; set; }
+    private string MuteTooltip => IsMuted ? "Ljud av (klicka för att slå på)" : "Ljud på (klicka för att stänga av)";
+    private async Task ToggleMute()
+    {
+        await IsMutedChanged.InvokeAsync(!IsMuted);
+        // Om vi stänger av ljudet, stoppa pågående TTS direkt
+        if (!IsMuted) // dvs vi är på väg att slå av ljudet
+        {
+            await JS.InvokeVoidAsync("isaStopSpeech");
+        }
+    }
+}
+
+<script>
+    // Store the touchmove handler so we can remove it later
+    let chatTouchMoveHandler = null;
+    let originalBodyStyles = null;
+
+    window.preventMobileScrollingOnChatPage = () => {
+        if (window.innerWidth <= 767) {
+            // Only apply scroll prevention if we're actually on the chat page
+            const chatContainer = document.querySelector('.chat-container');
+            if (!chatContainer) {
+                return; // Not on chat page, don't prevent scrolling
+            }
+
+            // Store original body styles for restoration
+            originalBodyStyles = {
+                overflow: document.body.style.overflow,
+                position: document.body.style.position,
+                width: document.body.style.width,
+                height: document.body.style.height
+            };
+
+            // Create the touchmove handler
+            chatTouchMoveHandler = function(e) {
+                // Only allow scrolling inside chat-messages
+                const chatMessages = document.querySelector('.chat-messages');
+                const chatInput = document.querySelector('.chat-input');
+                let target = e.target;
+                let isInsideChatMessages = false;
+                let isInsideChatInput = false;
+
+                // Check if the touch is inside chat-messages or chat-input
+                while (target && target !== document) {
+                    if (target === chatMessages) {
+                        isInsideChatMessages = true;
+                        break;
+                    }
+                    if (target === chatInput) {
+                        isInsideChatInput = true;
+                        break;
+                    }
+                    target = target.parentNode;
+                }
+
+                // If not inside chat-messages or chat-input, prevent scrolling
+                if (!isInsideChatMessages && !isInsideChatInput) {
+                    e.preventDefault();
+                }
+            };
+
+            // Add the event listener
+            document.addEventListener('touchmove', chatTouchMoveHandler, { passive: false });
+
+            // Prevent body scrolling completely
+            document.body.style.overflow = 'hidden';
+            document.body.style.position = 'fixed';
+            document.body.style.width = '100%';
+            document.body.style.height = '100%';
+            document.documentElement.style.overflow = 'hidden';
+        }
+    };
+
+    // Cleanup function to restore normal scrolling when leaving chat page
+    window.cleanupChatScrollPrevention = () => {
+        // Remove the touchmove event listener if it exists
+        if (chatTouchMoveHandler) {
+            document.removeEventListener('touchmove', chatTouchMoveHandler);
+            chatTouchMoveHandler = null;
+        }
+
+        // Restore original body styles
+        if (originalBodyStyles) {
+            document.body.style.overflow = originalBodyStyles.overflow;
+            document.body.style.position = originalBodyStyles.position;
+            document.body.style.width = originalBodyStyles.width;
+            document.body.style.height = originalBodyStyles.height;
+            originalBodyStyles = null;
+        }
+
+        // Also restore document element
+        document.documentElement.style.overflow = '';
+
+        // Ensure mobile scrolling works
+        if (window.ensureMobileScrolling) {
+            window.ensureMobileScrolling();
+        }
+    };
+
+    // Cleanup when page is unloaded or navigated away
+    window.addEventListener('beforeunload', cleanupChatScrollPrevention);
+
+    // Cleanup for Blazor SPA navigation
+    if (window.Blazor) {
+        window.Blazor.addEventListener('enhancedload', () => {
+            // If we're not on chat page anymore, cleanup
+            if (!document.querySelector('.chat-container')) {
+                cleanupChatScrollPrevention();
+            }
+        });
+    }
+
+    // Robust functions that can be called multiple times
+    window.scrollToBottom = (element) => {
+        try {
+            if (element && typeof element.scrollTop !== 'undefined') {
+                element.scrollTop = element.scrollHeight;
+            }
+        } catch (e) {
+            console.warn('scrollToBottom failed:', e);
+        }
+    };
+
+    window.focusElement = (elementId) => {
+        try {
+            const element = document.getElementById(elementId);
+            if (element && typeof element.focus === 'function') {
+                element.focus();
+            }
+        } catch (e) {
+            console.warn('focusElement failed:', e);
+        }
+    };
+
+    window.clearFileInput = (element) => {
+        try {
+            if (element && element.type === 'file') {
+                // Clear the file input value
+                element.value = '';
+
+                // Also clear any internal state
+                if (element.files) {
+                    // Create a new FileList (empty)
+                    const dt = new DataTransfer();
+                    element.files = dt.files;
+                }
+
+                // Trigger change event to notify any listeners
+                const event = new Event('change', { bubbles: true });
+                element.dispatchEvent(event);
+            }
+        } catch (e) {
+            console.warn('clearFileInput failed:', e);
+        }
+    };
+
+    // Show Safari desktop file input if needed
+    window.showSafariDesktopFileInput = () => {
+        const isSafariDesktop = /Safari/.test(navigator.userAgent) &&
+                               !/Chrome/.test(navigator.userAgent) &&
+                               !/iPad|iPhone|iPod/.test(navigator.userAgent) &&
+                               window.innerWidth >= 768;
+
+        if (isSafariDesktop) {
+            console.log('Safari desktop detected - showing alternative file input');
+            const safariWrapper = document.querySelector('.safari-desktop-file-wrapper');
+            const regularButton = document.querySelector('.file-upload-btn');
+
+            if (safariWrapper && regularButton) {
+                safariWrapper.style.display = 'block';
+                regularButton.style.display = 'none';
+            }
+        }
+    };
+
+    window.triggerFileInput = (element) => {
+        console.log('🔍 triggerFileInput called!');
+        console.log('🔍 User Agent:', navigator.userAgent);
+        console.log('🔍 Element:', element);
+        console.log('🔍 Element type:', element ? element.type : 'null');
+
+        try {
+            if (element && element.type === 'file' && typeof element.click === 'function') {
+                console.log('✅ Valid file input element found');
+
+                // Clear any previous selection first
+                element.value = '';
+
+                // Safari specific handling
+                if (/Safari/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent)) {
+                    console.log('Safari detected - using enhanced click handling');
+
+                    // Only show warning for actual iOS simulators, not desktop Safari
+                    const isIOSSimulator = /iPad|iPhone|iPod/.test(navigator.userAgent) &&
+                                         window.navigator.platform === 'MacIntel' &&
+                                         window.navigator.webdriver;
+
+                    if (isIOSSimulator) {
+                        console.warn('iOS Simulator detected - file upload may not work');
+                        const fileArea = document.querySelector('.file-upload-area');
+                        if (fileArea) {
+                            fileArea.classList.add('safari-responsive-warning');
+                        }
+                    }
+
+                    // Simplified Safari handling - just ensure element is clickable
+                    console.log('Element visibility:', window.getComputedStyle(element).display, window.getComputedStyle(element).visibility);
+
+                    // For desktop Safari, try direct click first
+                    try {
+                        console.log('Attempting direct Safari click...');
+                        element.click();
+                        console.log('Direct Safari click completed');
+                    } catch (e1) {
+                        console.log('Direct Safari click failed, trying enhanced method:', e1);
+
+                        // Fallback: make element temporarily visible and try again
+                        const originalStyles = {
+                            position: element.style.position,
+                            left: element.style.left,
+                            top: element.style.top,
+                            width: element.style.width,
+                            height: element.style.height,
+                            opacity: element.style.opacity,
+                            pointerEvents: element.style.pointerEvents
+                        };
+
+                        // Make element clickable but invisible
+                        element.style.position = 'absolute';
+                        element.style.left = '-9999px';
+                        element.style.top = '-9999px';
+                        element.style.width = '1px';
+                        element.style.height = '1px';
+                        element.style.opacity = '0.01';
+                        element.style.pointerEvents = 'auto';
+
+                        setTimeout(() => {
+                            try {
+                                element.click();
+                                console.log('Enhanced Safari click completed');
+                            } catch (e2) {
+                                console.warn('Enhanced Safari click also failed:', e2);
+
+                                // Last resort: create a temporary visible file input
+                                const tempInput = document.createElement('input');
+                                tempInput.type = 'file';
+                                tempInput.accept = element.accept;
+                                tempInput.style.position = 'fixed';
+                                tempInput.style.top = '50%';
+                                tempInput.style.left = '50%';
+                                tempInput.style.transform = 'translate(-50%, -50%)';
+                                tempInput.style.zIndex = '10000';
+
+                                tempInput.onchange = (e) => {
+                                    // Copy files to original input
+                                    if (e.target.files && e.target.files.length > 0) {
+                                        const dt = new DataTransfer();
+                                        for (let file of e.target.files) {
+                                            dt.items.add(file);
+                                        }
+                                        element.files = dt.files;
+
+                                        // Trigger change event on original input
+                                        const changeEvent = new Event('change', { bubbles: true });
+                                        element.dispatchEvent(changeEvent);
+                                    }
+                                    document.body.removeChild(tempInput);
+                                };
+
+                                document.body.appendChild(tempInput);
+                                tempInput.click();
+                                console.log('Fallback visible file input created for Safari');
+                            }
+
+                            // Restore original styles
+                            setTimeout(() => {
+                                Object.keys(originalStyles).forEach(key => {
+                                    if (originalStyles[key] !== undefined) {
+                                        element.style[key] = originalStyles[key];
+                                    }
+                                });
+                            }, 50);
+                        }, 10);
+                    }
+                } else {
+                    console.log('Non-Safari browser - using standard click');
+                    // Standard click for other browsers
+                    element.click();
+                }
+            } else {
+                console.log('Invalid element or not a file input:', element);
+            }
+        } catch (e) {
+            console.warn('triggerFileInput failed:', e);
+            // Fallback: try standard click anyway
+            if (element && typeof element.click === 'function') {
+                console.log('Attempting fallback click...');
+                element.click();
+            }
+        }
+    };
+
+    window.addClass = (selector, className) => {
+        try {
+            const element = document.querySelector('.' + selector);
+            if (element) {
+                element.classList.add(className);
+                console.log(`Added class '${className}' to element with selector '.${selector}'`);
+            } else {
+                console.warn(`Element with selector '.${selector}' not found`);
+            }
+        } catch (e) {
+            console.warn('addClass failed:', e);
+        }
+    };
+
+    window.removeClass = (selector, className) => {
+        try {
+            const element = document.querySelector('.' + selector);
+            if (element) {
+                element.classList.remove(className);
+                console.log(`Removed class '${className}' from element with selector '.${selector}'`);
+            } else {
+                console.warn(`Element with selector '.${selector}' not found`);
+            }
+        } catch (e) {
+            console.warn('removeClass failed:', e);
+        }
+    };
+</script>

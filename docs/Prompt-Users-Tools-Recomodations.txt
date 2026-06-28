@@ -1,0 +1,278 @@
+🔑 Rekommenderad struktur
+1. Systemprompt (ren och stabil)
+Här ska bara finnas:
+Uppdraget (bokföring, kommunikation, planering, etc).
+Stil & ton.
+Förbud (t.ex. *@example.com aldrig).
+Regel om att använda “verktygskatalogen” för pluginanrop.
+Exempel:
+Du har tillgång till en katalog med plugins/funktioner. När du ska utföra något (t.ex. skicka e-post, skapa en kalenderhändelse, hantera filer) ska du alltid slå upp i katalogen hur funktionen används och anropa den direkt.
+2. Användarkatalog (users.json / users.pdf)
+Separat fil där personerna, deras prio-kanaler, och identiteter bor.
+→ Länkas in i systemprompten:
+För kontaktinfo och persondata, använd alltid "users.json".
+3. Plugin-/Funktionskatalog (plugins.json / plugins.md)
+Det du har listat nu (E-post, SMS, Fortnox, OneDrive, Dropbox, Google Workspace, Office 365 osv) passar perfekt i en egen fil.
+Format:
+
+JSON om du vill att agenten ska kunna läsa maskinellt (bra för automation).
+Markdown/PDF om det mest är dokumentation till utvecklarna.
+Agenten kan då instrueras i systemprompten:
+Alla tillgängliga plugins och funktioner beskrivs i "plugins.json". Använd denna för att avgöra vilket verktyg du ska anropa och vilka parametrar som krävs.
+✅ Fördelar med att dela upp
+Systemprompten blir tidlös → Du ändrar inte på den varje gång ett nytt plugin läggs till.
+Plugins blir modulära → Lägg till/ta bort utan att röra basprompten.
+Användardata hålls separat → Säkrare, lättare att uppdatera.
+Framtidssäkring → Du kan till och med versionera plugins.json (v1, v2…) när API:er ändras.
+🔄 Hur koppla ihop?
+Systemprompten pekar till båda katalogerna:
+users.json för användardata
+plugins.json för funktioner
+När agenten kör:
+Den läser reglerna i prompten.
+Den slår upp användare i users.json.
+Den väljer rätt verktyg i plugins.json.
+Den anropar plugin via MCP eller motsvarande mekanism.
+👉 Vill du att jag tar fram en mall för systemprompten (renodlad, ~1 sida) och två separata filer (users.json + plugins.json) baserat på ditt nuvarande innehåll? Så får du en färdig struktur.
+Du sade:
+men hur kopplas detta sedan ihop i semantickernel????
+ChatGPT sade:
+
+Tänkte i 20s
+Toppen fråga. I SK (Semantic Kernel) kopplar du ihop systemprompten, users.json och plugins.json så här, i tre lager:
+Systemprompt → “hjärnans regler”
+Users/Plugins-kataloger → “fakta & verktyg”
+SK-plugins (Native/Semantic) + auto-toolcalling → “utförandet”
+Nedan får du en rak, körbar mall i .NET 9 som du kan stoppa in i ditt Isa.Mcp.Agent.
+1) Projektstruktur (förslagsvis)
+/config/
+  systemprompt.txt
+  users.json
+  plugins.json
+/src/
+  Plugins/
+    MailPlugin.cs
+    SlackPlugin.cs
+    FortnoxPlugin.cs
+  Bootstrap/
+    KernelBootstrap.cs
+systemprompt.txt = ren, tidlös basprompt (beteende + regler).
+users.json = användarkatalog (kontaktvägar, prio, roller).
+plugins.json = maskinläsbar funktionskatalog (namn, beskrivning, parametrar).
+2) Ladda in systemprompten som System Prompt
+using Microsoft.SemanticKernel;
+using Microsoft.SemanticKernel.Connectors.OpenAI;
+
+public static class KernelBootstrap
+{
+    public static async Task<Kernel> BuildAsync(IConfiguration cfg)
+    {
+        var builder = Kernel.CreateBuilder();
+
+        // Välj OpenAI/Azure OpenAI – byt till din provider:
+        builder.AddOpenAIChatCompletion(
+            modelId: cfg["OpenAI:Model"], 
+            apiKey: cfg["OpenAI:ApiKey"]
+        );
+
+        var kernel = builder.Build();
+
+        // Läs systemprompten från fil
+        var systemPrompt = await File.ReadAllTextAsync("config/systemprompt.txt");
+
+        // Sätt default-exekveringsregler för chat
+        kernel.ImportPluginFromObject(new ContextFilters(systemPrompt), "ContextFilters");
+
+        return kernel;
+    }
+}
+
+public sealed class ContextFilters
+{
+    private readonly string _systemPrompt;
+    public ContextFilters(string systemPrompt) => _systemPrompt = systemPrompt;
+
+    // Hjälpmetod att skapa ChatSettings per körning
+    public OpenAIPromptExecutionSettings CreateChatSettings() => new()
+    {
+        // Viktigt: ger modellen "reglerna"
+        ChatSystemPrompt = _systemPrompt,
+        ToolCallBehavior = ToolCallBehavior.AutoInvokeKernelFunctions  // auto-toolcalling
+    };
+}
+Poängen: ChatSystemPrompt är exakt platsen där systemprompten hör hemma i SK.
+(Tidigare brukade man foga in regler i varje prompt—nu sätter du den centraliserat.)
+3) Ladda users.json och plugins.json i minne (RAG-light) och som variabler
+Du kan göra två saker samtidigt:
+a) Lägga hela JSON:en som “facts” i volatile memory (så att du kan göra semantiska sökningar om du vill).
+b) Tillgängliggöra utdrag (t.ex. “Anna → Slack först, annars mail”) som context-variabler i varje körning.
+using System.Text.Json;
+using Microsoft.SemanticKernel.Memory;
+
+public sealed class Catalogs
+{
+    public required UsersCatalog Users { get; init; }
+    public required PluginsCatalog Plugins { get; init; }
+}
+
+public static class CatalogLoader
+{
+    public static async Task<Catalogs> LoadAsync()
+    {
+        var users = JsonSerializer.Deserialize<UsersCatalog>(
+            await File.ReadAllTextAsync("config/users.json"))!;
+        var plugins = JsonSerializer.Deserialize<PluginsCatalog>(
+            await File.ReadAllTextAsync("config/plugins.json"))!;
+        return new Catalogs { Users = users, Plugins = plugins };
+    }
+
+    public static async Task IndexToMemoryAsync(Kernel kernel, Catalogs data)
+    {
+        var memory = kernel.Memory; // VolatileMemory per default i SK
+
+        // Indexera användare (namn, prio, kontaktvägar)
+        foreach (var u in data.Users.People)
+        {
+            var text = $"{u.Name}. prio={u.PriorityChannel}. email={u.Email}. slack={u.Slack}. phone={u.Phone}.";
+            await memory.SaveInformationAsync(
+                collection: "users",
+                id: u.Email ?? u.Name,
+                text: text,
+                description: "User contact preferences");
+        }
+
+        // Indexera plugins (funktionslista)
+        foreach (var p in data.Plugins.Tools)
+        {
+            var summary = $"{p.Name}: {p.Description}. Params={string.Join(", ", p.Parameters.Select(kv=>$"{kv.Key}:{kv.Value.Type}"))}";
+            await memory.SaveInformationAsync(
+                collection: "plugins",
+                id: p.Name,
+                text: summary,
+                description: "Tool spec");
+        }
+    }
+}
+
+// Exempel DTOs (förenklat)
+public sealed class UsersCatalog { public List<User> People { get; set; } = []; }
+public sealed class User
+{
+    public string Name { get; set; } = "";
+    public string? Email { get; set; }
+    public string? Slack { get; set; }
+    public string? Phone { get; set; }
+    public string? PriorityChannel { get; set; } // "Slack" | "Mail" | "SMS" ...
+}
+
+public sealed class PluginsCatalog { public List<ToolSpec> Tools { get; set; } = []; }
+public sealed class ToolSpec
+{
+    public string Name { get; set; } = "";
+    public string Description { get; set; } = "";
+    public Dictionary<string, ToolParam> Parameters { get; set; } = new();
+}
+public sealed class ToolParam { public string Type { get; set; } = "string"; public bool Required { get; set; } }
+Minimal RAG: Du kan köra kernel.Memory.SearchAsync("users", "hur kontaktar jag anna") för att låta modellen hämta rätt preferenser vid behov.
+4) Registrera riktiga SK-plugins (Native) som verktyg att auto-anropa
+Modellen auto-väljer funktioner om du registrerar dem som KernelFunction (via [KernelFunction]).
+SK mappar detta till OpenAI “tools”/“functions” under huven.
+using Microsoft.SemanticKernel;
+
+public sealed class MailPlugin
+{
+    [KernelFunction, Description("Skicka e-post via vår mailtjänst")]
+    public async Task<string> SendEmailAsync(
+        [Description("Mottagarens e-postadress")] string recipient,
+        [Description("Ämnesrad")] string subject,
+        [Description("Meddelandetext")] string body)
+    {
+        // TODO: implementera… (anropa din interna klient eller MCP)
+        // Respektera spärr: *@example.com = förbjudet
+        if (recipient.EndsWith("@example.com", StringComparison.OrdinalIgnoreCase))
+            throw new InvalidOperationException("Sändning till *@example.com är förbjuden.");
+
+        // await _mail.SendAsync(recipient, subject, body);
+        return $"Sent to {recipient}";
+    }
+}
+
+// Registrering:
+kernel.ImportPluginFromObject(new MailPlugin(), "Mail");
+kernel.ImportPluginFromObject(new SlackPlugin(), "Slack");
+kernel.ImportPluginFromObject(new FortnoxPlugin(), "Fortnox");
+// ...etc
+Viktigt: Det är detta som gör att modellen faktiskt kan “trycka på knapparna”.
+När du sedan kör en chattprompt med ToolCallBehavior.AutoInvokeKernelFunctions = true kommer modellen själv att välja Mail.SendEmailAsync när uppgiften är “skicka e-post”.
+5) “Glue”-logik när du ska köra en dialog
+Hämtar chat settings (med systemprompten).
+Lägger till kontekstvariabler: utdrag ur users + plugins (t.ex. top-hits från memory).
+Kör InvokePromptAsync eller Chat och låter modellen auto-anropa verktyg.
+public sealed class AgentRunner
+{
+    private readonly Kernel _kernel;
+    private readonly ContextFilters _filters;
+    private readonly Catalogs _catalogs;
+
+    public AgentRunner(Kernel k, ContextFilters f, Catalogs c) { _kernel = k; _filters = f; _catalogs = c; }
+
+    public async Task<string> RunAsync(string userMessage)
+    {
+        var settings = _filters.CreateChatSettings();
+
+        // Hämta snabb “grounding”: exempel – hitta kontaktpreferens för “Anna”
+        // (I praktiken: plocka ut när det är relevant. Här visar vi principen.)
+        var usersHit = _catalogs.Users.People.FirstOrDefault(p => userMessage.Contains(p.Name, StringComparison.OrdinalIgnoreCase));
+        var pluginsHint = string.Join(", ", _catalogs.Plugins.Tools.Select(t => t.Name));
+
+        var prompt = $$"""
+        Du är AccountingAgent. Använd rätt verktyg automatiskt.
+        Om uppgiften är att kommunicera, respektera personens kontakt-prio.
+        Om uppgiften kräver fil/kalender/bokföring – välj motsvarande plugin.
+
+        {{(usersHit is not null ? $"Kontaktpreferens {usersHit.Name}: {usersHit.PriorityChannel}" : "")}}
+        Tillgängliga verktyg (översikt): {{pluginsHint}}
+
+        Använd E.164 för telefon, ISO 8601 för datum/tid. Aldrig *@example.com.
+
+        Uppgift: {{userMessage}}
+        """;
+
+        var result = await _kernel.InvokePromptAsync(prompt, new(settings));
+        return result.GetValue<string>()!;
+    }
+}
+Här injicerar du lagom mycket kontext (snabba utdrag). Behöver du djupare lookup → sök i kernel.Memory och foga in top-N träffar i prompten innan anrop.
+6) Dynamiskt från plugins.json → skapa “proxy-funktioner” (valfritt, men kraftfullt)
+Om du vill att plugins.json ska styra verktyg helt dynamiskt (utan att du manuellt skriver C#-plugins), kan du skapa en generisk “router”:
+Läs plugins.json
+För varje ToolSpec skapa ett KernelFunction som bara proxar vidare till din MCP/HTTP-klient med samma namn + parametrar.
+Då blir varje ny funktion i plugins.json automatiskt tillgänglig för modellen via auto-toolcalling.
+Detta är 20–30 rader extra kod med KernelFunctionFactory.CreateFromMethod (eller ett litet reflection-trick). Säg till så skriver jag just den byggstenen också.
+7) Körordning (startup)
+var kernel = await KernelBootstrap.BuildAsync(cfg);
+var catalogs = await CatalogLoader.LoadAsync();
+await CatalogLoader.IndexToMemoryAsync(kernel, catalogs);
+
+// Registrera “native” plugins (Mail/Slack/Fortnox/…)
+kernel.ImportPluginFromObject(new MailPlugin(), "Mail");
+// ...
+
+var runner = new AgentRunner(kernel, new ContextFilters(await File.ReadAllTextAsync("config/systemprompt.txt")), catalogs);
+var answer = await runner.RunAsync("Skicka ett kort slack till Anna Andersson att fakturan #2025-008 är betald.");
+Console.WriteLine(answer);
+Vad händer nu?
+Systemprompten styr beteende.
+Modellen ser uppgiften, läser hintar (users/plugins), och väljer verktyget (t.ex. Slack.SendMessageAsync).
+SK auto-anropar din pluginmetod (toolcalling).
+Om du vill: efterverkningar/loggning i C#.
+8) Säkerhetsregler & “hard stops”
+Håll kritiska förbud i systemprompten och i plugins (defensivt).
+Ex: blockera *@example.com i MailPlugin (visat ovan).
+Känsliga nycklar ska hämtas via vault/secrets (inte från users.json).
+Lägg gärna en policy-check plugin som SK alltid kör först vid riskabla kommandon (t.ex. radering i filer).
+Sammanfattning
+Systemprompten → ChatSystemPrompt i SK.
+users.json / plugins.json → laddas separat, indexeras i SK Memory för lookup och injiceras som kort kontext när det behövs.
+Riktiga verktyg → SK-plugins (Native/Semantic) registreras i kernel; slå på ToolCallBehavior.AutoInvokeKernelFunctions.
+(Bonus): Generera “proxy-plugins” direkt från plugins.json så att nya funktioner blir tillgängliga utan ny C#-kod.

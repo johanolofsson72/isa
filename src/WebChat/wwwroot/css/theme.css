@@ -1,0 +1,120 @@
+/* Dark mode CSS */
+:root {
+    --bg-color: #fff;
+    --bg-secondary-color: #f8f9fa;
+    --text-color: #212529;
+    --text-secondary-color: #6c757d;
+    --border-color: #dee2e6;
+    --primary-color: #0d6efd;
+    --secondary-color: #6c757d;
+    --accent-color: #0dcaf0;
+    --success-color: #198754;
+    --warning-color: #ffc107;
+    --danger-color: #dc3545;
+    --card-bg: #fff;
+    --card-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    --input-bg: #fff;
+    --input-border: #ced4da;
+    --input-focus-border: #86b7fe;
+    --chat-user-bg: #e9ecef;
+    --chat-agent-bg: #f0f7ff;
+}
+
+.dark-theme {
+    --bg-color: #212529;
+    --bg-secondary-color: #343a40;
+    --text-color: #f8f9fa;
+    --text-secondary-color: #adb5bd;
+    --border-color: #495057;
+    --primary-color: #0d6efd;
+    --secondary-color: #adb5bd;
+    --accent-color: #0dcaf0;
+    --success-color: #20c997;
+    --warning-color: #ffc107;
+    --danger-color: #ff6b6b;
+    --card-bg: #343a40;
+    --card-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+    --input-bg: #495057;
+    --input-border: #6c757d;
+    --input-focus-border: #0d6efd;
+    --chat-user-bg: #495057;
+    --chat-agent-bg: #313d51;
+}
+
+body {
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    transition: background-color 0.3s, color 0.3s;
+}
+
+/* Cards */
+.card {
+    background-color: var(--card-bg);
+    border-color: var(--border-color);
+    box-shadow: var(--card-shadow);
+}
+
+.card-header {
+    background-color: var(--bg-secondary-color);
+    border-color: var(--border-color);
+}
+
+/* Forms */
+.form-control {
+    background-color: var(--input-bg);
+    border-color: var(--input-border);
+    color: var(--text-color);
+}
+
+.form-control:focus {
+    border-color: var(--input-focus-border);
+    background-color: var(--input-bg);
+    color: var(--text-color);
+}
+
+/* Buttons */
+.btn {
+    transition: all 0.3s;
+}
+
+/* Navigation */
+.navbar {
+    background-color: var(--bg-secondary-color);
+    border-color: var(--border-color);
+}
+
+/* Chat bubbles */
+.chat-message-user {
+    background-color: var(--chat-user-bg);
+}
+
+.chat-message-agent {
+    background-color: var(--chat-agent-bg);
+}
+
+/* Tables */
+.table {
+    color: var(--text-color);
+    border-color: var(--border-color);
+}
+
+/* Workflows and task lists */
+.workflow-card, .scheduled-task-card {
+    background-color: var(--card-bg);
+    border-color: var(--border-color);
+    color: var(--text-color);
+}
+
+/* Modals */
+.modal-content {
+    background-color: var(--bg-color);
+    border-color: var(--border-color);
+}
+
+.modal-header {
+    border-bottom-color: var(--border-color);
+}
+
+.modal-footer {
+    border-top-color: var(--border-color);
+}

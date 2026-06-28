@@ -1,0 +1,7 @@
+{
+  "name": "googleworkspace",
+  "version": "1.0.0",
+  "description": "Google Workspace plugin for Drive, Calendar, and Chat collaboration",
+  "author": "Example",
+  "channels": ["IO", "HTTP"]
+} 

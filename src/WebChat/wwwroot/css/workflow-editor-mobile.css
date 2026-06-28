@@ -1,0 +1,50 @@
+/* Mobile-specific styles for Workflow Editor */
+
+/* Make buttons smaller on mobile */
+@media (max-width: 767px) {
+  .workflow-editor .page-header .btn {
+    padding: 4px 8px !important; /* Much smaller padding */
+    font-size: 0.75rem !important; /* Smaller font size */
+    min-height: auto !important; /* Remove minimum height */
+  }
+  
+  .workflow-editor .page-header .btn .bi {
+    font-size: 0.8rem !important; /* Smaller icons */
+  }
+  
+  /* Make the header more compact on mobile */
+  .workflow-editor .page-header {
+    padding: 8px 12px !important;
+    flex-direction: column !important;
+    gap: 8px !important;
+    align-items: stretch !important;
+  }
+  
+  .workflow-editor .page-header h1 {
+    font-size: 1.2rem !important;
+    margin: 0 !important;
+    text-align: center !important;
+  }
+  
+  .workflow-editor .page-header div {
+    display: flex !important;
+    justify-content: center !important;
+    gap: 8px !important;
+  }
+  
+  /* Make other buttons in the editor smaller too */
+  .workflow-editor .btn {
+    padding: 4px 8px !important;
+    font-size: 0.75rem !important;
+    min-height: auto !important;
+  }
+  
+  .workflow-editor .btn .bi {
+    font-size: 0.8rem !important;
+  }
+  
+  /* Compact the editor container */
+  .workflow-editor .editor-container {
+    padding: 8px !important;
+  }
+}

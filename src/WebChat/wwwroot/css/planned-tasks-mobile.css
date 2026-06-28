@@ -1,0 +1,64 @@
+/* Mobile-specific styles for Planned Tasks page */
+
+/* Add 10px space before first planned task item */
+.calendar-grid {
+  margin-top: 10px;
+}
+
+/* Make buttons smaller on mobile */
+@media (max-width: 767px) {
+  .planned-tasks-container .btn {
+    padding: 4px 8px !important; /* Much smaller padding */
+    font-size: 0.75rem !important; /* Smaller font size */
+    min-height: auto !important; /* Remove minimum height */
+  }
+  
+  .planned-tasks-container .btn .bi {
+    font-size: 0.8rem !important; /* Smaller icons */
+  }
+  
+  .planned-tasks-container .btn-sm {
+    padding: 2px 6px !important; /* Even smaller for small buttons */
+    font-size: 0.7rem !important; /* Even smaller font */
+  }
+  
+  /* Make the header more compact on mobile */
+  .planned-tasks-container .page-header {
+    padding: 8px 12px !important;
+    margin-bottom: 1rem !important;
+  }
+  
+  .planned-tasks-container .page-header h1 {
+    font-size: 1.2rem !important;
+  }
+  
+  /* Make task action buttons smaller */
+  .task-actions .btn {
+    padding: 4px 8px !important;
+    font-size: 0.75rem !important;
+    min-height: auto !important;
+  }
+  
+  .task-actions .btn .bi {
+    font-size: 0.8rem !important;
+  }
+  
+  /* Compact planned tasks container on mobile */
+  .planned-tasks-container {
+    padding: 12px 8px !important;
+  }
+  
+  .scheduled-task-card {
+    margin-bottom: 12px !important;
+  }
+  
+  /* Make week navigation buttons smaller */
+  .week-navigation .btn {
+    padding: 4px 8px !important;
+    font-size: 0.75rem !important;
+  }
+  
+  .week-navigation .btn .bi {
+    font-size: 0.8rem !important;
+  }
+}

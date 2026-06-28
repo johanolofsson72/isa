@@ -1,0 +1,74 @@
+﻿@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
+@inherits LayoutComponentBase
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject NavigationManager Navigation
+@inject IConfiguration Configuration
+
+<AuthorizeView>
+    <Authorized>
+        <div class="isa-app">
+            <CascadingValue Value="IsMuted">
+                <CascadingValue Value="EventCallback.Factory.Create<bool>(this, OnMutedChanged)" Name="IsMutedChanged">
+                    <!-- Main content area that takes full height except for the navigation bar -->
+                    <main class="main-content">
+                        @Body
+                    </main>
+                </CascadingValue>
+            </CascadingValue>
+            <!-- Mobile bottom navigation bar -->
+            <MobileNavBar />
+        </div>
+    </Authorized>
+    <NotAuthorized>
+        @if (!Navigation.Uri.EndsWith("/login"))
+        {
+            Navigation.NavigateTo("/login");
+        }
+        else
+        {
+            @Body
+        }
+    </NotAuthorized>
+</AuthorizeView>
+
+<div id="blazor-error-ui" data-nosnippet>
+    Ett ohanterat fel har inträffat.
+    <a href="." class="reload">Ladda om</a>
+    <span class="dismiss">🗙</span>
+</div>
+
+<script src="js/conversation-helpers.js"></script>
+
+@code {
+    private bool IsMuted = true;
+    private bool _muteLoaded = false;
+    private async Task OnMutedChanged(bool value)
+    {
+        IsMuted = value;
+        await JSRuntime.InvokeVoidAsync("isaSetMuteCookie", value);
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !_muteLoaded)
+        {
+            var muted = await JSRuntime.InvokeAsync<bool>("isaGetMuteCookie");
+            IsMuted = muted;
+            _muteLoaded = true;
+            StateHasChanged();
+        }
+        // Set the title dynamically
+        var title = "Isa";
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("eval", $"document.title = '{title}'");
+        }
+        catch (Exception)
+        {
+            // Ignore JS interop errors during static rendering
+        }
+    }
+}
+
+@inject IJSRuntime JSRuntime

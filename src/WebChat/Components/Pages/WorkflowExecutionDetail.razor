@@ -1,0 +1,568 @@
+@page "/workflow-execution/{Id}"
+@using WebChat.Services
+@inject NavigationManager NavigationManager
+@inject HistoryService HistoryService
+
+<PageTitle>Körningsdetaljer - @(execution?.WorkflowName ?? "Laddar...") - Isa</PageTitle>
+
+<div class="execution-detail-container">
+    <div class="page-header">
+        <button class="btn btn-outline-secondary me-2" @onclick="GoBack">
+            <span class="bi bi-arrow-left"></span> Tillbaka
+        </button>
+        <div class="header-info">
+            <h1>@(execution?.WorkflowName ?? "Laddar...")</h1>
+            <div class="execution-summary">
+                @if (execution != null)
+                {
+                    <span class="execution-status @GetStatusClass(execution.Status)">
+                        <span class="bi @GetStatusIcon(execution.Status)"></span>
+                        @GetStatusText(execution.Status)
+                    </span>
+                    <span class="execution-time">@execution.ExecutedAt.ToString("yyyy-MM-dd HH:mm:ss")</span>
+                    @if (execution.Duration.HasValue)
+                    {
+                        <span class="execution-duration">@FormatDuration(execution.Duration.Value)</span>
+                    }
+                }
+            </div>
+        </div>
+    </div>
+
+    @if (isLoading)
+    {
+        <div class="loading-state">
+            <span class="bi bi-arrow-repeat spin loading-icon"></span>
+            <p>Laddar körningsdetaljer...</p>
+        </div>
+    }
+    else if (hasError)
+    {
+        <div class="error-state">
+            <span class="bi bi-exclamation-triangle-fill error-icon"></span>
+            <h3>Fel vid laddning</h3>
+            <p>@errorMessage</p>
+            <button class="btn btn-primary" @onclick="LoadExecutionDetailsAsync">
+                <span class="bi bi-arrow-repeat"></span> Försök igen
+            </button>
+        </div>
+    }
+    else if (execution == null)
+    {
+        <div class="error-state">
+            <span class="bi bi-exclamation-triangle-fill error-icon"></span>
+            <h3>Körningsdetaljer hittades inte</h3>
+            <p>Denna workflow-körning kunde inte hittas.</p>
+        </div>
+    }
+    else
+    {
+        <div class="execution-details">
+            <!-- Workflow Information -->
+            <div class="detail-section">
+                <h3><span class="bi bi-info-circle"></span> Allmän information</h3>
+                <div class="detail-grid">
+                    <div class="detail-item">
+                        <label>Workflow ID:</label>
+                        <span>@execution.WorkflowId</span>
+                    </div>
+                    <div class="detail-item">
+                        <label>Körnings-ID:</label>
+                        <span>@execution.Id</span>
+                    </div>
+                    <div class="detail-item">
+                        <label>Startad:</label>
+                        <span>@execution.ExecutedAt.ToString("yyyy-MM-dd HH:mm:ss")</span>
+                    </div>
+                    @if (execution.Duration.HasValue)
+                    {
+                        <div class="detail-item">
+                            <label>Varaktighet:</label>
+                            <span>@FormatDuration(execution.Duration.Value)</span>
+                        </div>
+                    }
+                    <div class="detail-item">
+                        <label>Status:</label>
+                        <span class="execution-status @GetStatusClass(execution.Status)">
+                            <span class="bi @GetStatusIcon(execution.Status)"></span>
+                            @GetStatusText(execution.Status)
+                        </span>
+                    </div>
+                    @if (!string.IsNullOrEmpty(execution.ErrorMessage))
+                    {
+                        <div class="detail-item">
+                            <label>Felmeddelande:</label>
+                            <span class="error-message">@execution.ErrorMessage</span>
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <!-- Execution Steps -->
+            @if (executionSteps.Any())
+            {
+                <div class="detail-section">
+                    <h3><span class="bi bi-list-ol"></span> Körningssteg</h3>
+                    <div class="steps-timeline">
+                        @foreach (var (step, index) in executionSteps.Select((s, i) => (s, i)))
+                        {
+                            <div class="step-item @GetStepStatusClass(step.Status)">
+                                <div class="step-indicator">
+                                    <span class="step-number">@(index + 1)</span>
+                                    <span class="step-status-icon bi @GetStepStatusIcon(step.Status)"></span>
+                                </div>
+                                <div class="step-content">
+                                    <div class="step-header">
+                                        <h4>@step.Name</h4>
+                                        <div class="step-meta">
+                                            <span class="step-time">@step.Timestamp.ToString("HH:mm:ss")</span>
+                                            @if (step.Duration.HasValue)
+                                            {
+                                                <span class="step-duration">@FormatDuration(step.Duration.Value)</span>
+                                            }
+                                        </div>
+                                    </div>
+                                    @if (!string.IsNullOrEmpty(step.Description))
+                                    {
+                                        <p class="step-description">@step.Description</p>
+                                    }
+                                    @if (!string.IsNullOrEmpty(step.Input))
+                                    {
+                                        <div class="step-details">
+                                            <h5>Input:</h5>
+                                            <pre class="step-data">@step.Input</pre>
+                                        </div>
+                                    }
+                                    @if (!string.IsNullOrEmpty(step.Output))
+                                    {
+                                        <div class="step-details">
+                                            <h5>Output:</h5>
+                                            <pre class="step-data">@step.Output</pre>
+                                        </div>
+                                    }
+                                    @if (!string.IsNullOrEmpty(step.ErrorMessage))
+                                    {
+                                        <div class="step-details error">
+                                            <h5>Fel:</h5>
+                                            <pre class="step-error">@step.ErrorMessage</pre>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+
+            <!-- Execution Logs -->
+            @if (executionLogs.Any())
+            {
+                <div class="detail-section">
+                    <h3><span class="bi bi-journal-text"></span> Körningsloggar</h3>
+                    <div class="logs-container">
+                        @foreach (var log in executionLogs)
+                        {
+                            <div class="log-entry @GetLogLevelClass(log.Level)">
+                                <span class="log-time">@log.Timestamp.ToString("HH:mm:ss.fff")</span>
+                                <span class="log-level">@log.Level</span>
+                                <span class="log-message">@log.Message</span>
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+<style>
+.execution-detail-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 1rem;
+}
+
+.page-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 2rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.header-info h1 {
+    margin: 0;
+    color: #333;
+}
+
+.execution-summary {
+    display: flex;
+    gap: 1rem;
+    margin-top: 0.5rem;
+    font-size: 0.875rem;
+    color: #666;
+}
+
+.execution-status {
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-weight: 500;
+}
+
+.execution-status.success {
+    background: #d4edda;
+    color: #155724;
+}
+
+.execution-status.failed {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+.execution-status.running {
+    background: #d1ecf1;
+    color: #0c5460;
+}
+
+.detail-section {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    margin-bottom: 1.5rem;
+    overflow: hidden;
+}
+
+.detail-section h3 {
+    background: #f8f9fa;
+    margin: 0;
+    padding: 1rem;
+    border-bottom: 1px solid #e0e0e0;
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+.detail-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1rem;
+    padding: 1rem;
+}
+
+.detail-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 0;
+}
+
+.detail-item label {
+    font-weight: 500;
+    color: #666;
+}
+
+.error-message {
+    color: #dc3545;
+    font-family: monospace;
+    font-size: 0.875rem;
+}
+
+.steps-timeline {
+    padding: 1rem;
+}
+
+.step-item {
+    display: flex;
+    margin-bottom: 1.5rem;
+    position: relative;
+}
+
+.step-item:not(:last-child):before {
+    content: '';
+    position: absolute;
+    left: 22px;
+    top: 45px;
+    bottom: -24px;
+    width: 2px;
+    background: #e0e0e0;
+}
+
+.step-indicator {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: #f8f9fa;
+    border: 2px solid #e0e0e0;
+    margin-right: 1rem;
+    flex-shrink: 0;
+}
+
+.step-item.success .step-indicator {
+    background: #d4edda;
+    border-color: #28a745;
+}
+
+.step-item.failed .step-indicator {
+    background: #f8d7da;
+    border-color: #dc3545;
+}
+
+.step-item.running .step-indicator {
+    background: #d1ecf1;
+    border-color: #17a2b8;
+}
+
+.step-number {
+    font-weight: 600;
+    font-size: 0.875rem;
+}
+
+.step-status-icon {
+    position: absolute;
+    top: -2px;
+    right: -2px;
+    background: white;
+    border-radius: 50%;
+    padding: 2px;
+    font-size: 0.75rem;
+}
+
+.step-content {
+    flex: 1;
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 1rem;
+}
+
+.step-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}
+
+.step-header h4 {
+    margin: 0;
+    font-size: 1rem;
+}
+
+.step-meta {
+    display: flex;
+    gap: 1rem;
+    font-size: 0.875rem;
+    color: #666;
+}
+
+.step-description {
+    margin: 0.5rem 0;
+    color: #666;
+}
+
+.step-details {
+    margin-top: 1rem;
+}
+
+.step-details h5 {
+    margin: 0 0 0.5rem 0;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #495057;
+}
+
+.step-data, .step-error {
+    background: white;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+    padding: 0.75rem;
+    margin: 0;
+    font-family: monospace;
+    font-size: 0.875rem;
+    white-space: pre-wrap;
+    word-break: break-word;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.step-error {
+    background: #fff5f5;
+    border-color: #fed7d7;
+    color: #c53030;
+}
+
+.logs-container {
+    max-height: 400px;
+    overflow-y: auto;
+    background: #f8f9fa;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+    margin: 1rem;
+}
+
+.log-entry {
+    display: grid;
+    grid-template-columns: auto auto 1fr;
+    gap: 1rem;
+    padding: 0.5rem 1rem;
+    border-bottom: 1px solid #e0e0e0;
+    font-family: monospace;
+    font-size: 0.875rem;
+}
+
+.log-entry:last-child {
+    border-bottom: none;
+}
+
+.log-time {
+    color: #666;
+}
+
+.log-level {
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.log-entry.info .log-level {
+    color: #17a2b8;
+}
+
+.log-entry.warning .log-level {
+    color: #ffc107;
+}
+
+.log-entry.error .log-level {
+    color: #dc3545;
+}
+
+.log-entry.debug .log-level {
+    color: #6c757d;
+}
+
+.loading-state, .error-state {
+    text-align: center;
+    padding: 3rem;
+    color: #666;
+}
+
+.loading-icon, .error-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+}
+
+.loading-icon.spin {
+    animation: spin 1s linear infinite;
+}
+
+@@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+</style>
+
+@code {
+    [Parameter] public string Id { get; set; } = string.Empty;
+
+    private WorkflowExecutionHistoryModel? execution;
+    private List<ExecutionStepModel> executionSteps = new();
+    private List<ExecutionLogModel> executionLogs = new();
+    private bool isLoading = false;
+    private bool hasError = false;
+    private string errorMessage = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!string.IsNullOrEmpty(Id))
+        {
+            await LoadExecutionDetailsAsync();
+        }
+    }
+
+    private async Task LoadExecutionDetailsAsync()
+    {
+        isLoading = true;
+        hasError = false;
+        try
+        {
+            execution = await HistoryService.GetWorkflowExecutionDetailsAsync(Id);
+            if (execution != null)
+            {
+                executionSteps = await HistoryService.GetExecutionStepsAsync(Id);
+                executionLogs = await HistoryService.GetExecutionLogsAsync(Id);
+            }
+        }
+        catch (Exception ex)
+        {
+            hasError = true;
+            errorMessage = ex.Message;
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void GoBack()
+    {
+        NavigationManager.NavigateTo("/history");
+    }
+
+    private string GetStatusClass(string status) => status.ToLower() switch
+    {
+        "completed" => "success",
+        "failed" => "failed",
+        "running" => "running",
+        _ => ""
+    };
+
+    private string GetStatusIcon(string status) => status.ToLower() switch
+    {
+        "completed" => "bi-check-circle-fill",
+        "failed" => "bi-x-circle-fill",
+        "running" => "bi-arrow-repeat",
+        _ => "bi-question-circle"
+    };
+
+    private string GetStatusText(string status) => status switch
+    {
+        "Completed" => "Slutförd",
+        "Failed" => "Misslyckad",
+        "Running" => "Körs",
+        _ => status
+    };
+
+    private string GetStepStatusClass(string status) => status.ToLower() switch
+    {
+        "completed" => "success",
+        "failed" => "failed",
+        "running" => "running",
+        _ => ""
+    };
+
+    private string GetStepStatusIcon(string status) => status.ToLower() switch
+    {
+        "completed" => "bi-check",
+        "failed" => "bi-x",
+        "running" => "bi-arrow-repeat",
+        _ => "bi-circle"
+    };
+
+    private string GetLogLevelClass(string level) => level.ToLower();
+
+    private string FormatDuration(TimeSpan duration)
+    {
+        if (duration.TotalMinutes >= 1)
+        {
+            return $"{duration.Minutes}m {duration.Seconds}s";
+        }
+        else if (duration.TotalSeconds >= 1)
+        {
+            return $"{duration.TotalSeconds:F1}s";
+        }
+        else
+        {
+            return $"{duration.TotalMilliseconds:F0}ms";
+        }
+    }
+}

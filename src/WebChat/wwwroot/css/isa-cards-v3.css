@@ -1,0 +1,23 @@
+/* Overrides for History and Planned Tasks cards (v3) */
+
+/* History: enforce min size and responsive grid columns */
+.history-card { min-height: 160px; }
+@media (min-width: 768px) {
+  .history-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+    gap: 16px;
+  }
+}
+
+/* Planned Tasks: enforce min size and responsive grid columns */
+.scheduled-task-card { min-height: 160px; }
+@media (min-width: 768px) {
+  .calendar-grid,
+  .task-calendar { /* support legacy class if present */
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+    gap: 16px;
+  }
+}
+

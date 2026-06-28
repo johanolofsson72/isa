@@ -1,0 +1,81 @@
+# ---- Build output ----
+[Bb]in/
+[Oo]bj/
+[Dd]ebug/
+[Rr]elease/
+build/
+artifacts/
+*.dll
+*.exe
+*.pdb
+
+# ---- Test / tooling output ----
+[Tt]est[Rr]esults/
+**/TestResults/
+*.trx
+*.coverage
+coverage*.json
+StrykerOutput/
+.sonarqube/
+
+# ---- IDE / editor ----
+.vs/
+.vscode/
+.idea/
+*.iml
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+*.DotSettings.user
+
+# ---- OS cruft ----
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# ---- Secrets & local config (NEVER COMMIT) ----
+# Real credentials live in environment variables or local-only files.
+appsettings.*.local.json
+appsettings.Local.json
+*.local.json
+secrets.json
+.env
+.env.*
+NuGet.Config
+*token*.json
+*-access-token.json
+google-token.json
+google-credentials.json
+*-credentials.json
+*.pfx
+*.p12
+*.pem
+*.key
+
+# ---- Databases (runtime state) ----
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+
+# ---- Runtime / generated data ----
+TempFiles/
+reportarchive/
+analysis_reports/
+Data/history.json
+
+# ---- Large vendored binaries (download separately) ----
+# Tesseract OCR language data — see README (DocumentInterpreterPlugin)
+*.traineddata
+
+# ---- Real bookkeeping / financial documents (PII) ----
+ekonomi/
+SIE4/
+*.sie4
+
+# ---- Backups ----
+*.bak
+*.orig
+*.tmp
+*~

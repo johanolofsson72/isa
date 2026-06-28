@@ -1,0 +1,204 @@
+@inject WebChat.Services.StatsService Stats
+@inject WebChat.Services.ChatService ChatService
+@* mobile toggle icon support *@
+
+@inject IJSRuntime JS
+
+@if (IsDesktop)
+{
+    <div class="stats-panel @(Collapsed ? "collapsed" : "")">
+        <div class="stats-header" @onclick="Toggle">
+            <strong>Stats</strong>
+            <span class="bi" style="margin-left:auto">@(Collapsed ? "▶" : "◀")</span>
+        </div>
+        <div class="stats-body">
+            <div class="stat-row"><span>Current msg</span><span>@CurrentChars chars / @CurrentBytes B (~@ApproxTokens tokens)</span></div>
+            <div class="stat-row"><span>System prompt</span><span>@SystemPromptChars chars</span></div>
+            <div class="stat-row"><span>Plugins</span><span>@PluginCount plugins / @FunctionCount funcs</span></div>
+            <div class="stat-row"><span>users.json</span><span>@UsersJsonBytes B</span></div>
+            <div class="stat-row"><span>Plugin desc</span><span>@PluginDescChars chars</span></div>
+            <div class="stat-row"><span>Message count</span><span>@TotalMessages</span></div>
+
+            @* New statistics section *@
+            <div class="stat-row"><span>History size</span><span>@HistoryCharacters chars (~@HistoryTokens tokens)</span></div>
+
+            @if (PluginUsageStats.Any())
+            {
+                <div class="stat-section">
+                    <div class="stat-header-small">Recent Plugin Usage:</div>
+                    @foreach (var plugin in PluginUsageStats.Take(3))
+                    {
+                        <div class="stat-row plugin-stat">
+                            <span>@plugin.PluginName.@plugin.FunctionName</span>
+                            <span>@plugin.CallCount calls</span>
+                        </div>
+                    }
+                </div>
+            }
+
+            @if (!string.IsNullOrEmpty(ExtraInfo))
+            {
+                <div class="stat-row"><span>Info</span><span>@ExtraInfo</span></div>
+            }
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public string CurrentMessage { get; set; } = string.Empty;
+    [Parameter] public string? ExtraInfo { get; set; }
+    [Parameter] public int TotalMessages { get; set; }
+    [Parameter] public List<object>? Messages { get; set; } // Add messages parameter to calculate history
+
+    private int CurrentChars;
+    private int CurrentBytes;
+    private int ApproxTokens;
+    private int SystemPromptChars;
+    private int PluginCount;
+    private int FunctionCount;
+    private int UsersJsonBytes;
+    private int PluginDescChars;
+    private int HistoryCharacters;
+    private int HistoryTokens;
+    private List<WebChat.Services.PluginUsageStats> PluginUsageStats = new();
+    private bool Collapsed = true;
+    private bool IsDesktop = true;
+    private PeriodicTimer? _timer;
+    private string? _currentSessionId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Desktop detection
+        try
+        {
+            var width = await JS.InvokeAsync<int>("eval", "window.innerWidth");
+            IsDesktop = width >= 992; // Bootstrap lg
+        }
+        catch { IsDesktop = true; }
+
+        // Prime static stats once
+        var (spChars, plugCount, funcCount) = await Stats.GetSystemPromptStatsAsync();
+        SystemPromptChars = spChars;
+        PluginCount = plugCount;
+        FunctionCount = funcCount;
+        UsersJsonBytes = await Stats.GetUsersJsonSizeBytesAsync();
+        var (descChars, _) = await Stats.GetPluginDescriptionsSizeAsync();
+        PluginDescChars = descChars;
+
+        // Get current session ID for plugin stats
+        _currentSessionId = await GetCurrentSessionIdAsync();
+
+        // Load initial plugin usage stats
+        await LoadPluginUsageStatsAsync();
+
+        // Calculate history stats from current messages
+        UpdateHistoryStatsFromMessages();
+
+        // Start periodic refresh
+        _timer = new PeriodicTimer(TimeSpan.FromMilliseconds(1000)); // Reduced frequency for better performance
+        _ = Task.Run(async () =>
+        {
+            var refreshCounter = 0;
+            while (await _timer.WaitForNextTickAsync())
+            {
+                var (c, b) = WebChat.Services.StatsService.MeasureString(CurrentMessage);
+                CurrentChars = c;
+                CurrentBytes = b;
+                ApproxTokens = WebChat.Services.StatsService.ApproxTokensFromChars(c);
+
+                // Refresh plugin stats every 5 seconds and update history stats
+                refreshCounter++;
+                if (refreshCounter >= 5)
+                {
+                    await LoadPluginUsageStatsAsync();
+                    refreshCounter = 0;
+                }
+
+                // Update history stats from current messages every cycle
+                UpdateHistoryStatsFromMessages();
+
+                await InvokeAsync(StateHasChanged);
+            }
+        });
+    }
+
+    protected override void OnParametersSet()
+    {
+        // Update immediately on param changes
+        var (c, b) = WebChat.Services.StatsService.MeasureString(CurrentMessage);
+        CurrentChars = c;
+        CurrentBytes = b;
+        ApproxTokens = WebChat.Services.StatsService.ApproxTokensFromChars(c);
+
+        // Update history stats when messages change
+        UpdateHistoryStatsFromMessages();
+    }
+
+    private void Toggle() => Collapsed = !Collapsed;
+
+    public async ValueTask DisposeAsync()
+    {
+        _timer?.Dispose();
+        await Task.CompletedTask;
+    }
+
+    private Task<string?> GetCurrentSessionIdAsync()
+    {
+        try
+        {
+            // For now, return null since we can't access the private methods
+            // This will be improved when we have access to session information
+            return Task.FromResult<string?>(null);
+        }
+        catch
+        {
+            return Task.FromResult<string?>(null);
+        }
+    }
+
+    private async Task LoadPluginUsageStatsAsync()
+    {
+        try
+        {
+            PluginUsageStats = await Stats.GetPluginUsageStatsAsync(_currentSessionId);
+        }
+        catch
+        {
+            PluginUsageStats = new List<WebChat.Services.PluginUsageStats>();
+        }
+    }
+
+    private void UpdateHistoryStatsFromMessages()
+    {
+        try
+        {
+            // Calculate history stats from the Messages parameter
+            if (Messages != null)
+            {
+                HistoryCharacters = 0;
+                foreach (var message in Messages)
+                {
+                    // Use reflection to get Text property from any message type
+                    var textProperty = message.GetType().GetProperty("Text");
+                    if (textProperty != null)
+                    {
+                        var text = textProperty.GetValue(message) as string;
+                        HistoryCharacters += text?.Length ?? 0;
+                    }
+                }
+                HistoryTokens = (int)Math.Round(HistoryCharacters / 4.0); // 4 chars per token
+            }
+            else
+            {
+                HistoryCharacters = 0;
+                HistoryTokens = 0;
+            }
+        }
+        catch
+        {
+            HistoryCharacters = 0;
+            HistoryTokens = 0;
+        }
+    }
+}
+

@@ -1,0 +1,197 @@
+/* Mobile-specific responsive improvements for Plugin Management */
+
+/* Global alignment fixes for all screen sizes */
+.plugin-management .plugins-grid {
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.plugin-card {
+  margin: 0 0 1rem 0 !important;
+  padding: 1rem !important;
+}
+
+/* Mobile-first approach - single column layout with better height utilization */
+@media (max-width: 767px) {
+  /* Force single column layout on mobile */
+  .plugin-management .plugins-grid {
+    grid-template-columns: 1fr !important;
+    gap: 1rem !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Make plugin cards grow in height instead of being constrained */
+  .plugin-card {
+    min-height: auto !important;
+    height: auto !important;
+    padding: 1rem !important;
+    margin: 0 0 1rem 0 !important;
+  }
+  
+  /* Improve plugin header layout for mobile */
+  .plugin-header {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 1rem !important;
+  }
+  
+  .plugin-info {
+    margin-right: 0 !important;
+    margin-bottom: 0 !important;
+  }
+  
+  .plugin-name {
+    font-size: 1.1rem !important;
+    margin-bottom: 0.5rem !important;
+  }
+  
+  .plugin-description {
+    font-size: 0.9rem !important;
+    line-height: 1.3 !important;
+    margin-bottom: 1rem !important;
+  }
+  
+  /* Make plugin toggle more prominent on mobile */
+  .plugin-toggle {
+    align-self: flex-start !important;
+    margin-bottom: 1rem !important;
+  }
+  
+  /* Improve plugin stats layout */
+  .plugin-stats {
+    flex-direction: column !important;
+    gap: 0.5rem !important;
+    margin-bottom: 1rem !important;
+  }
+  
+  .plugin-stats .badge {
+    align-self: flex-start !important;
+    font-size: 0.8rem !important;
+    padding: 0.3rem 0.6rem !important;
+  }
+  
+  /* Make functions list more readable on mobile */
+  .functions-list {
+    margin-top: 1rem !important;
+    padding: 0.75rem !important;
+  }
+  
+  .functions-list h6 {
+    font-size: 0.9rem !important;
+    margin-bottom: 0.5rem !important;
+  }
+  
+  .function-item {
+    font-size: 0.8rem !important;
+    padding: 0.25rem 0 !important;
+    border-bottom: 1px solid var(--border-color) !important;
+  }
+  
+  .function-item:last-child {
+    border-bottom: none !important;
+  }
+  
+  /* Make buttons smaller and stack vertically */
+  .plugin-management .btn {
+    padding: 6px 12px !important;
+    font-size: 0.8rem !important;
+    min-height: auto !important;
+  }
+  
+  .plugin-management .btn .bi {
+    font-size: 0.9rem !important;
+  }
+  
+  .action-buttons {
+    flex-direction: column !important;
+    gap: 0.5rem !important;
+  }
+  
+  .action-buttons .btn {
+    width: 100% !important;
+  }
+  
+  /* Improve page header for mobile */
+  .plugin-management .d-flex.justify-content-between {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 1rem !important;
+  }
+  
+  .plugin-management h2 {
+    font-size: 1.3rem !important;
+    text-align: center !important;
+  }
+  
+  /* Make table more mobile-friendly and aligned */
+  .plugin-management .table-responsive {
+    margin: 0 !important;
+    border-radius: 0 !important;
+  }
+  
+  .plugin-management .table {
+    min-width: 100% !important;
+    font-size: 0.8rem !important;
+  }
+  
+  .plugin-management .table th,
+  .plugin-management .table td {
+    padding: 0.5rem 0.25rem !important;
+    white-space: nowrap !important;
+  }
+  
+  /* Hide less important columns on very small screens */
+  @media (max-width: 480px) {
+    .plugin-management .table th:nth-child(3),
+    .plugin-management .table td:nth-child(3) {
+      display: none !important; /* Hide description */
+    }
+    
+    .plugin-management .table th:nth-child(4),
+    .plugin-management .table td:nth-child(4) {
+      display: none !important; /* Hide functions count */
+    }
+  }
+  
+  /* Improve container padding and alignment */
+  .plugin-management {
+    padding: 0.5rem !important;
+    margin: 0 !important;
+    padding-left: 10px !important;
+  }
+  
+  /* Make summary cards stack vertically */
+  .summary-section .row {
+    flex-direction: column !important;
+  }
+  
+  .summary-card {
+    margin-bottom: 1rem !important;
+    padding: 0.75rem !important;
+  }
+  
+  .summary-number {
+    font-size: 1.5rem !important;
+  }
+  
+  /* Improve alert spacing */
+  .alert {
+    margin: 0.5rem 0 !important;
+    padding: 0.75rem !important;
+    font-size: 0.9rem !important;
+  }
+  
+  /* Make loading states more compact */
+  .text-center.py-5 {
+    padding: 2rem 1rem !important;
+  }
+  
+  .text-center.py-5 i {
+    font-size: 3rem !important;
+  }
+  
+  .text-center.py-5 h4 {
+    font-size: 1.1rem !important;
+  }
+}

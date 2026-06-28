@@ -1,0 +1,71 @@
+@using Microsoft.AspNetCore.Components.Routing
+@using Microsoft.AspNetCore.Components.Authorization
+@using WebChat.Services
+@inject NavigationManager Navigation
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+<div class="mobile-nav-container">
+    <nav class="mobile-nav">
+        <NavLink class="nav-item" href="/" Match="NavLinkMatch.All">
+            <span class="nav-icon bi bi-chat-dots-fill"></span>
+            <span class="nav-text">Chatt</span>
+        </NavLink>
+        
+        <NavLink class="nav-item" href="/workflows">
+            <span class="nav-icon bi bi-diagram-3-fill"></span>
+            <span class="nav-text">Arbetsflöden</span>
+        </NavLink>
+        
+        <NavLink class="nav-item" href="/history">
+            <span class="nav-icon bi bi-clock-history"></span>
+            <span class="nav-text">Historik</span>
+        </NavLink>
+        
+        <NavLink class="nav-item" href="/planned-tasks">
+            <span class="nav-icon bi bi-calendar-check-fill"></span>
+            <span class="nav-text">Planerat</span>
+        </NavLink>
+
+        <NavLink class="nav-item" href="/plugins">
+            <span class="nav-icon bi bi-puzzle"></span>
+            <span class="nav-text">Plugins</span>
+        </NavLink>
+
+        <NavLink class="nav-item" href="/fortnox-oauth">
+            <span class="nav-icon bi bi-cash-stack"></span>
+            <span class="nav-text">Fortnox</span>
+        </NavLink>
+
+        <!-- Theme toggle as part of navigation -->
+        <div class="nav-item theme-toggle-nav">
+            <ThemeToggle @rendermode="InteractiveServer"/>
+        </div>
+
+        <!-- Logout button -->
+        <div class="nav-item logout-nav" @onclick="HandleLogout">
+            <span class="nav-icon bi bi-box-arrow-right"></span>
+            <span class="nav-text">Logga ut</span>
+        </div>
+    </nav>
+</div>
+
+@code {
+    // This component represents the mobile bottom navigation bar
+    
+    private async Task HandleLogout()
+    {
+        try
+        {
+            var sessionProvider = (SessionAuthenticationStateProvider)AuthenticationStateProvider;
+            await sessionProvider.MarkUserAsLoggedOut();
+            Navigation.NavigateTo("/login");
+        }
+        catch (Exception ex)
+        {
+            // Log error if needed
+            Console.WriteLine($"Logout error: {ex.Message}");
+            // Force navigation anyway
+            Navigation.NavigateTo("/login");
+        }
+    }
+}

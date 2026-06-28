@@ -1,0 +1,398 @@
+@page "/history/{Id}"
+@using WebChat.Services
+@using Microsoft.AspNetCore.Components.Web.Infrastructure
+@inject NavigationManager NavigationManager 
+@inject HistoryService HistoryService
+@inject IJSRuntime JSRuntime
+
+<PageTitle>Konversation - Isa</PageTitle>
+
+<div class="conversation-detail">
+    <div class="page-header">
+        <div class="header-left">
+            <button class="btn btn-icon" @onclick="GoBack">
+                <span class="bi bi-arrow-left"></span>
+            </button>
+            <h1>@(_conversation?.Title ?? "Laddar...")</h1>
+        </div>
+        
+        <div class="header-actions">
+            @if (_conversation != null)
+            {
+                <span class="conversation-date">
+                    <span class="bi bi-clock"></span>
+                    @_conversation.Timestamp.ToString("MMM d, yyyy - HH:mm")
+                </span>
+                <div class="dropdown d-inline-block ms-2">
+                    <button class="btn btn-icon" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        <span class="bi bi-three-dots-vertical"></span>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li>
+                            <button class="dropdown-item" @onclick="CopyConversationToClipboard">
+                                <span class="bi bi-clipboard me-2"></span>Kopiera till urklipp
+                            </button>
+                        </li>
+                        <li>
+                            <button class="dropdown-item" @onclick="ExportConversation">
+                                <span class="bi bi-download me-2"></span>Exportera konversation
+                            </button>
+                        </li>
+                        <li>
+                            <button class="dropdown-item" @onclick="ShareConversation">
+                                <span class="bi bi-share me-2"></span>Dela
+                            </button>
+                        </li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li>
+                            <button class="dropdown-item" @onclick="CreateSimilarConversation">
+                                <span class="bi bi-chat-dots me-2"></span>Ställ liknande fråga
+                            </button>
+                        </li>
+                    </ul>
+                </div>
+            }
+        </div>
+    </div>
+    
+    @if (_isLoading)
+    {
+        <div class="loading-skeleton">
+            <div class="skeleton-header">
+                <div class="skeleton-avatar"></div>
+                <div class="skeleton-line w-25"></div>
+            </div>
+            <div class="skeleton-message"></div>
+            
+            <div class="skeleton-header" style="margin-top: 20px;">
+                <div class="skeleton-avatar alt"></div>
+                <div class="skeleton-line w-25"></div>
+            </div>
+            <div class="skeleton-message"></div>
+            <div class="skeleton-message short"></div>
+            
+            <div class="skeleton-header" style="margin-top: 20px;">
+                <div class="skeleton-avatar"></div>
+                <div class="skeleton-line w-25"></div>
+            </div>
+            <div class="skeleton-message"></div>
+        </div>
+    }
+    else if (_conversation == null)
+    {
+        <div class="error-state">
+            <span class="bi bi-exclamation-triangle-fill error-icon"></span>
+            <h3>Conversation not found</h3>
+            <p>The conversation you're looking for doesn't exist or has been deleted</p>
+            <button class="btn btn-primary" @onclick="GoBack">Back to History</button>
+        </div>
+    }
+    else
+    {
+        <div class="conversation-timeline">
+            <div class="timeline-header">
+                <div class="timeline-title">
+                    <span class="bi bi-chat-text me-2"></span>
+                    Conversation Timeline
+                </div>
+                <div class="message-count">
+                    <span class="bi bi-chat-square-text me-1"></span>
+                    @_conversation.Messages.Count messages
+                </div>
+            </div>
+            
+            <div class="conversation-messages">
+                @foreach (var message in _conversation.Messages)
+                {
+                    <div class="message-container animate-in @(message.IsUser ? "user-container" : "agent-container")">
+                        <div class="message @(message.IsUser ? "user-message" : "agent-message")">
+                            <div class="message-avatar">
+                                @if (message.IsUser)
+                                {
+                                    <span class="bi bi-person-circle"></span>
+                                }
+                                else
+                                {
+                                    <span class="bi bi-robot"></span>
+                                }
+                            </div>
+                            <div class="message-content">
+                                <div class="message-metadata">
+                                    <div class="message-sender">
+                                        @(message.IsUser ? "Du" : "Isa")
+                                    </div>
+                                    <div class="message-time" title="@message.Timestamp.ToString("f")">
+                                        @message.Timestamp.ToString("HH:mm")
+                                    </div>
+                                </div>
+                                <div class="message-text">@message.Text</div>
+                                @if (message.Actions?.Count > 0)
+                                {
+                                    <div class="message-actions">
+                                        <div class="actions-header">
+                                            <span class="bi bi-tools"></span> Actions performed:
+                                        </div>
+                                        <ul class="actions-list">
+                                            @foreach (var action in message.Actions)
+                                            {
+                                                <li class="action-item">
+                                                    <div class="action-badge @GetActionColor(action.Type)">
+                                                        <span class="action-icon @GetActionIcon(action.Type)"></span>
+                                                    </div>
+                                                    <span class="action-text">@action.Description</span>
+                                                </li>
+                                            }
+                                        </ul>
+                                    </div>
+                                }
+                                <div class="message-quick-actions">
+                                    <button class="btn btn-sm btn-light" @onclick="() => CopyMessageToClipboard(message.Text)">
+                                        <span class="bi bi-clipboard-plus"></span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+        
+        <div class="action-buttons">
+            <button class="btn btn-outline-secondary me-2" @onclick="GoBack">
+                <span class="bi bi-arrow-left"></span> Back
+            </button>
+            <button class="btn btn-primary" @onclick="CreateSimilarConversation">
+                <span class="bi bi-chat-dots"></span> Ask similar question
+            </button>
+        </div>
+    }
+    
+    @if (_showToast)
+    {
+        <div class="toast-container position-fixed bottom-0 end-0 p-3">
+            <div class="toast show" role="alert" aria-live="assertive" aria-atomic="true">
+                <div class="toast-header @_toastClass">
+                    <span class="@_toastIcon me-2"></span>
+                    <strong class="me-auto">@_toastTitle</strong>
+                    <button type="button" class="btn-close" @onclick="HideToast"></button>
+                </div>
+                <div class="toast-body">
+                    @_toastMessage
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public string Id { get; set; } = default!;
+    
+    private ConversationDetailModel? _conversation;
+    private bool _isLoading = true;
+    private string? _errorMessage;
+    private bool _showToast = false;
+    private string _toastTitle = "";
+    private string _toastMessage = "";
+    private string _toastClass = "";
+    private string _toastIcon = "";
+    
+    protected override async Task OnParametersSetAsync()
+    {
+        await LoadConversationAsync();
+    }
+    
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!_isLoading && _conversation != null && firstRender)
+        {
+            // Add smooth scroll effect for long conversations
+            await JSRuntime.InvokeVoidAsync("scrollToBottom", "conversation-messages");
+        }
+    }
+    
+    private async Task LoadConversationAsync()
+    {
+        try
+        {
+            _isLoading = true;
+            _conversation = await HistoryService.GetConversationDetailAsync(Id);
+            
+            if (_conversation == null)
+            {
+                _errorMessage = "Kunde inte hitta den begärda konversationen";
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Failed to load conversation: {ex.Message}";
+        }
+        finally
+        {
+            _isLoading = false;
+            StateHasChanged();
+        }
+    }
+    
+    private void GoBack()
+    {
+        NavigationManager.NavigateTo("/history");
+    }
+    
+    private void CreateSimilarConversation()
+    {
+        // Get the first user message as a starting point
+        var firstUserMessage = _conversation?.Messages.FirstOrDefault(m => m.IsUser)?.Text ?? "";
+        
+        // Navigate to chat with the message pre-filled
+        NavigationManager.NavigateTo($"/?message={Uri.EscapeDataString(firstUserMessage)}");
+    }
+    
+    private async Task CopyConversationToClipboard()
+    {
+        try
+        {
+            var text = GetConversationText();
+            await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", text);
+            
+            ShowToast("Success", "Conversation copied to clipboard!", "bg-success text-white", "bi bi-clipboard-check");
+        }
+        catch (Exception ex)
+        {
+            ShowToast("Error", $"Failed to copy: {ex.Message}", "bg-danger text-white", "bi bi-exclamation-triangle");
+        }
+    }
+    
+    private async Task CopyMessageToClipboard(string text)
+    {
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", text);
+            ShowToast("Copied", "Message copied to clipboard", "bg-success text-white", "bi bi-clipboard-check");
+        }
+        catch (Exception ex)
+        {
+            ShowToast("Error", $"Failed to copy: {ex.Message}", "bg-danger text-white", "bi bi-exclamation-triangle");
+        }
+    }
+    
+    private async Task ExportConversation()
+    {
+        try
+        {
+            var text = GetConversationText();
+            var fileName = $"conversation-{_conversation?.Id ?? "export"}.txt";
+            
+            // Use JS to download the file
+            await JSRuntime.InvokeVoidAsync("downloadFile", fileName, text);
+            
+            ShowToast("Success", "Conversation exported successfully", "", "bi bi-check-circle-fill text-success");
+        }
+        catch (Exception ex)
+        {
+            ShowToast("Error", $"Export failed: {ex.Message}", "bg-danger text-white", "bi bi-exclamation-triangle");
+        }
+    }
+    
+    private void ShareConversation()
+    {
+        // For now just show a notification that this feature is coming soon
+        ShowToast("Coming Soon", "Sharing functionality will be available in a future update", "", "bi bi-info-circle text-primary");
+    }
+    
+    private void ShowToast(string title, string message, string cssClass, string icon)
+    {
+        _toastTitle = title;
+        _toastMessage = message;
+        _toastClass = cssClass;
+        _toastIcon = icon;
+        _showToast = true;
+        
+        // Auto-hide the toast after 3 seconds
+        Task.Run(async () => {
+            await Task.Delay(3000);
+            await InvokeAsync(() => {
+                _showToast = false;
+                StateHasChanged();
+            });
+        });
+    }
+    
+    private void HideToast()
+    {
+        _showToast = false;
+    }
+    
+    private string GetActionIcon(string actionType)
+    {
+        return actionType.ToLower() switch
+        {
+            "email" => "bi bi-envelope",
+            "sms" => "bi bi-phone",
+            "teams" => "bi bi-microsoft-teams",
+            "slack" => "bi bi-slack",
+            "whatsapp" => "bi bi-whatsapp",
+            "file" => "bi bi-file-earmark",
+            "calendar" => "bi bi-calendar",
+            "weather" => "bi bi-cloud-sun",
+            "drive" => "bi bi-hdd",
+            "onedrive" => "bi bi-cloud",
+            "dropbox" => "bi bi-dropbox",
+            "googledrive" => "bi bi-google",
+            _ => "bi bi-lightning"
+        };
+    }
+    
+    private string GetActionColor(string actionType)
+    {
+        return actionType.ToLower() switch
+        {
+            "email" => "badge-blue",
+            "sms" => "badge-green",
+            "teams" => "badge-purple",
+            "slack" => "badge-slack",
+            "whatsapp" => "badge-whatsapp",
+            "file" => "badge-orange",
+            "calendar" => "badge-red",
+            "weather" => "badge-cyan",
+            "drive" => "badge-gray",
+            "onedrive" => "badge-blue",
+            "dropbox" => "badge-blue",
+            "googledrive" => "badge-red",
+            _ => "badge-primary"
+        };
+    }
+    
+    private string GetConversationText()
+    {
+        if (_conversation == null || !_conversation.Messages.Any())
+            return "";
+        
+        var result = new System.Text.StringBuilder();
+        result.AppendLine($"Conversation: {_conversation.Title}");
+        result.AppendLine($"Date: {_conversation.Timestamp:g}");
+        result.AppendLine();
+        
+        foreach (var message in _conversation.Messages)
+        {
+            var sender = message.IsUser ? "Användare" : "Isa";
+            result.AppendLine($"[{message.Timestamp:HH:mm:ss}] {sender}: {message.Text}");
+            
+            // Include actions in the export
+            if (message.Actions?.Count > 0)
+            {
+                result.AppendLine("  Actions:");
+                foreach (var action in message.Actions)
+                {
+                    result.AppendLine($"   - {action.Description}");
+                }
+                result.AppendLine();
+            }
+        }
+        
+        result.AppendLine();
+        result.AppendLine("Exporterad från Isa");
+        
+        return result.ToString();
+    }
+}

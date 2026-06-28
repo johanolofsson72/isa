@@ -1,0 +1,93 @@
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Docker
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# Visual Studio / VS Code
+.vs/
+.vscode/
+**/*.user
+**/*.userosscache
+**/*.suo
+**/*.userprefs
+**/*.dbmdl
+**/*.dbproj.schemaview
+**/*.jfm
+
+# Build results
+[Bb]in/
+[Oo]bj/
+[Tt]emp/
+[Ll]og/
+[Ll]ogs/
+[Tt]est[Rr]esult*/
+[Bb]uild[Ll]og.*
+*.[Pp]ublish.xml
+*.publishproj
+**/out/
+
+# .NET Core
+project.lock.json
+project.fragment.lock.json
+artifacts/
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Local configuration files
+appsettings.Development.json
+appsettings.Local.json
+appsettings.*.json
+!appsettings.json
+
+# Credentials and secrets
+*.pem
+*.pfx
+*.key
+*.crt
+*.cer
+*-creds.json
+*credentials*.json
+*google-credentials*.json
+*access-token*.json
+fortnox-access-token.json
+.env
+
+# Documentation and notes
+*.md
+!README.md
+!DOCKER_GUIDE.md
+LICENSE
+docs/
+
+# Tools directory
+tools/
+
+# Tests
+tests/
+*Tests/
+*Test/
+*Specs/
+
+# Misc
+.DS_Store
+Thumbs.db
+*.bak
+*.cache
+*.log
+
+# ── TLA+/TLC scratch + spec-kit + tests (added 2026-05-31) ─────────────────
+# Build restores/publishes a specific .csproj; TLC states/ dirs hit tens of GB.
+**/states/
+*.tla.out
+specs/
+.specify/
+tests/

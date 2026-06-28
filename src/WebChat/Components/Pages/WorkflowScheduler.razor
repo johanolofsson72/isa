@@ -1,0 +1,1950 @@
+@page "/workflows/schedules"
+@using System.Net.Http.Json
+@using System.Text.Json
+@using System.Text
+@using Microsoft.JSInterop
+@using WebChat.Services
+
+@inject IJSRuntime JS
+@inject WorkflowService WorkflowService
+@inject HttpClient Http
+@inject IConfiguration Configuration
+
+
+<div class="d-flex gap-2 mb-3">
+    <a class="btn btn-outline-secondary" href="@CrystalQuartzUrl" target="_blank" rel="noopener noreferrer">
+        <i class="bi bi-speedometer2 me-1"></i>Monitor
+    </a>
+    <a class="btn btn-outline-secondary" href="@QuartzAdminUrl" target="_blank" rel="noopener noreferrer">
+        <i class="bi bi-gear-wide-connected me-1"></i>Admin
+    </a>
+</div>
+
+<h3>Schemaläggare</h3>
+
+@if (!string.IsNullOrEmpty(errorMessage))
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        <strong>Fel:</strong> @errorMessage
+        <button type="button" class="btn-close" @onclick="() => errorMessage = null" aria-label="Stäng"></button>
+    </div>
+}
+
+<div class="workflow-scheduler">
+    @if (isLoading)
+    {
+        <div class="d-flex justify-content-center my-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Laddar...</span>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">Välj arbetsflöde</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label for="workflowSelect" class="form-label">Arbetsflöde</label>
+                            <select id="workflowSelect" class="form-select" @bind="selectedWorkflowId" @oninput="OnWorkflowSelected">
+                                <option value="">-- Välj ett arbetsflöde --</option>
+                                @foreach (var workflow in workflows)
+                                {
+                                    <option value="@workflow.Id">@workflow.Name</option>
+                                }
+                            </select>
+                        </div>
+
+                        @if (selectedWorkflow != null)
+                        {
+                            <div class="mb-3">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="enableScheduling"
+                                           @bind="isSchedulingEnabled">
+                                    <label class="form-check-label" for="enableScheduling">
+                                        Aktivera schemaläggning
+                                    </label>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            @if (selectedWorkflow != null && isSchedulingEnabled)
+            {
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header bg-primary text-white">
+                            <h5 class="mb-0">Schemakonfiguration</h5>
+                        </div>
+                        <div class="card-body">
+                            <!-- Schedule Format Selection -->
+                            <div class="mb-3">
+                                <label class="form-label">Schemaformat</label>
+                                <div class="btn-group w-100" role="group">
+                                    <input type="radio" class="btn-check" name="scheduleFormat" id="humanReadable"
+                                           @onchange="() => SetScheduleFormat(true)" checked="@useHumanReadableFormat">
+                                    <label class="btn btn-outline-primary" for="humanReadable">
+                                        <i class="bi bi-chat-text"></i> Läsbart format
+                                    </label>
+
+                                    <input type="radio" class="btn-check" name="scheduleFormat" id="cronFormat"
+                                           @onchange="() => SetScheduleFormat(false)" checked="@(!useHumanReadableFormat)">
+                                    <label class="btn btn-outline-primary" for="cronFormat">
+                                        <i class="bi bi-code"></i> CRON-uttryck
+                                    </label>
+                                </div>
+                            </div>
+
+                            <!-- Human-Readable Schedule Input -->
+                            @if (useHumanReadableFormat)
+                            {
+                                <div class="mb-3">
+                                    <label for="humanSchedule" class="form-label">Schema</label>
+                                    <input type="text" class="form-control" id="humanSchedule"
+                                           @bind="humanScheduleExpression"
+                                           @oninput="OnScheduleInputChanged"
+                                           placeholder="t.ex. 'daily at 9am', 'every monday at 2pm'">
+                                    <div class="form-text">
+                                        <small class="text-muted">
+                                            Exempel: "hourly", "daily at 9am", "every monday at 2pm", "weekly"
+                                        </small>
+                                    </div>
+                                </div>
+                            }
+                            else
+                            {
+                                <!-- CRON Expression Input -->
+                                <div class="mb-3">
+                                    <label for="cronExpression" class="form-label">CRON-uttryck</label>
+                                    <input type="text" class="form-control" id="cronExpression"
+                                           @bind="cronExpression"
+                                           @oninput="OnScheduleInputChanged"
+                                           placeholder="t.ex. '0 9 * * 1-5' eller '*/5 * * * *'">
+                                    <div class="form-text">
+                                        <small class="text-muted">
+                                            Format: sekund minut timme dag månad veckodag (eller 5-fält utan sekund)
+                                        </small>
+                                    </div>
+                                </div>
+                            }
+
+                            <!-- Schedule Validation and Description -->
+                            <div class="mb-3">
+                                @if (!string.IsNullOrEmpty(scheduleValidationMessage))
+                                {
+                                    <div class="alert @(scheduleIsValid ? "alert-success" : "alert-danger") py-2">
+                                        <i class="bi @(scheduleIsValid ? "bi-check-circle" : "bi-exclamation-triangle")"></i>
+                                        @scheduleValidationMessage
+                                        @if (!string.IsNullOrEmpty(scheduleDescription))
+                                        {
+                                            <br><small>@scheduleDescription</small>
+                                        }
+                                    </div>
+                                }
+                            </div>
+
+                            <!-- Advanced Schedule Settings -->
+                            <div class="mb-3">
+                                <button class="btn btn-outline-secondary btn-sm" type="button"
+                                        @onclick="ToggleAdvancedSettings">
+                                    <i class="bi @(showAdvancedSettings ? "bi-chevron-up" : "bi-chevron-down")"></i>
+                                    Avancerade inställningar
+                                </button>
+                            </div>
+
+                            @if (showAdvancedSettings)
+                            {
+                                <div class="card mb-3">
+                                    <div class="card-body">
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <label for="timezone" class="form-label">Tidszon</label>
+                                                <select class="form-select" id="timezone" @bind="selectedTimezone">
+                                                    <option value="Europe/Stockholm">Europe/Stockholm (Standard)</option>
+                                                    <option value="UTC">UTC</option>
+                                                    <option value="Europe/London">Europe/London</option>
+                                                    <option value="America/New_York">America/New_York</option>
+                                                    <option value="America/Los_Angeles">America/Los_Angeles</option>
+                                                </select>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <label for="misfireHandling" class="form-label">Misfire-hantering</label>
+                                                <select class="form-select" id="misfireHandling" @bind="selectedMisfireHandling">
+                                                    <option value="Skip">Hoppa över - Vänta på nästa schemalagda tid</option>
+                                                    <option value="RunImmediately">Kör omedelbart - Utför missad körning så snart som möjligt</option>
+                                                    <option value="RunOnNextSchedule">Kör vid nästa schema - Vänta på nästa schemalagda tid</option>
+                                                    <option value="RunImmediatelyAndContinue">Kör omedelbart och fortsätt - Kör nu och fortsätt med normalt schema</option>
+                                                </select>
+                                                <div class="form-text">
+                                                    <small class="text-muted">
+                                                        Vad som ska hända om en schemalagd körning missas på grund av systemavbrott
+                                                    </small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="mt-3">
+                                            <label for="scheduleDescription" class="form-label">Beskrivning (valfritt)</label>
+                                            <input type="text" class="form-control" id="scheduleDescription"
+                                                   @bind="customScheduleDescription"
+                                                   placeholder="Anpassad beskrivning av schemat">
+                                        </div>
+
+                                        <!-- Workflow Navigation Settings -->
+                                        <div class="mt-4">
+                                            <h6 class="text-primary mb-3">
+                                                <i class="bi bi-diagram-3"></i> Arbetsflödesnavigering
+                                            </h6>
+                                            <div class="row">
+                                                <div class="col-md-6">
+                                                    <label for="onSuccessStep" class="form-label">Vid framgång (OnSuccess)</label>
+                                                    <input type="text" class="form-control" id="onSuccessStep"
+                                                           @bind="onSuccessStep" @oninput="OnNavigationStepChanged"
+                                                           placeholder="Steg-ID att köra vid framgång">
+                                                    <div class="form-text">
+                                                        <small class="text-muted">
+                                                            Steg att köra när arbetsflödet slutförs framgångsrikt
+                                                        </small>
+                                                    </div>
+                                                    @if (!string.IsNullOrEmpty(onSuccessValidation))
+                                                    {
+                                                        <div class="text-danger small mt-1">
+                                                            <i class="bi bi-exclamation-triangle"></i> @onSuccessValidation
+                                                        </div>
+                                                    }
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <label for="onErrorStep" class="form-label">Vid fel (OnError)</label>
+                                                    <input type="text" class="form-control" id="onErrorStep"
+                                                           @bind="onErrorStep" @oninput="OnNavigationStepChanged"
+                                                           placeholder="Steg-ID att köra vid fel">
+                                                    <div class="form-text">
+                                                        <small class="text-muted">
+                                                            Steg att köra när arbetsflödet misslyckas eller får fel
+                                                        </small>
+                                                    </div>
+                                                    @if (!string.IsNullOrEmpty(onErrorValidation))
+                                                    {
+                                                        <div class="text-danger small mt-1">
+                                                            <i class="bi bi-exclamation-triangle"></i> @onErrorValidation
+                                                        </div>
+                                                    }
+                                                </div>
+                                            </div>
+                                            @if (availableSteps.Any())
+                                            {
+                                                <div class="mt-2">
+                                                    <small class="text-info">
+                                                        <i class="bi bi-info-circle"></i> Tillgängliga steg: @string.Join(", ", availableSteps)
+                                                    </small>
+                                                </div>
+                                            }
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+
+                            <div class="mb-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="enableScheduling"
+                                           @bind="isSchedulingEnabled">
+                                    <label class="form-check-label" for="enableScheduling">
+                                        Aktivera schemaläggning
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Vanliga scheman</label>
+                                @if (useHumanReadableFormat)
+                                {
+                                    <div class="d-flex flex-wrap gap-2">
+                                        <button type="button" class="btn btn-outline-secondary btn-sm"
+                                                @onclick='() => SetHumanSchedule("daily at 9am")'>
+                                            Dagligen 09:00
+                                        </button>
+                                        <button type="button" class="btn btn-outline-secondary btn-sm"
+                                                @onclick='() => SetHumanSchedule("every monday at 2pm")'>
+                                            Måndagar 14:00
+                                        </button>
+                                        <button type="button" class="btn btn-outline-secondary btn-sm"
+                                                @onclick='() => SetHumanSchedule("weekly")'>
+                                            Veckovis
+                                        </button>
+                                        <button type="button" class="btn btn-outline-secondary btn-sm"
+                                                @onclick='() => SetHumanSchedule("hourly")'>
+                                            Varje timme
+                                        </button>
+                                        <button type="button" class="btn btn-outline-secondary btn-sm"
+                                                @onclick='() => SetHumanSchedule("monthly")'>
+                                            Månadsvis
+                                        </button>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="d-flex flex-wrap gap-2">
+                                        <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="@(() => SetCronExpression(@"0 9 * * *"))">
+                                            Dagligen kl 09:00
+                                        </button>
+                                        <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="@(() => SetCronExpression(@"0 9 * * 1-5"))">
+                                            Vardagar kl 09:00
+                                        </button>
+                                        <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="@(() => SetCronExpression(@"0 */2 * * *"))">
+                                            Varannan timme
+                                        </button>
+                                        <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="@(() => SetCronExpression(@"0 0 1 * *"))">
+                                            Första dagen i månaden vid midnatt
+                                        </button>
+                                        <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="@(() => SetCronExpression(@"0 9 */2 * *"))">
+                                            Varannan dag kl 09:00
+                                        </button>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+
+        @if (selectedWorkflow != null)
+        {
+            <div class="row">
+                <div class="col-md-12 mb-4">
+                    <div class="card">
+                        <div class="card-header bg-primary text-white">
+                            <h5 class="mb-0">Arbetsflödesdetaljer</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <strong>Namn:</strong> @selectedWorkflow.Name
+                            </div>
+                            <div class="mb-3">
+                                <strong>Beskrivning:</strong> @selectedWorkflow.Description
+                            </div>
+                            @if (selectedWorkflow.LastExecuted.HasValue)
+                            {
+                                <div class="mb-3">
+                                    <strong>Senast körd:</strong> @selectedWorkflow.LastExecuted.Value.ToString("yyyy-MM-dd HH:mm:ss")
+                                </div>
+                            }
+                            @if (selectedWorkflow.NextExecutionTime.HasValue)
+                            {
+                                <div class="mb-3">
+                                    <strong>Nästa körning:</strong> @selectedWorkflow.NextExecutionTime.Value.ToString("yyyy-MM-dd HH:mm:ss")
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Job History and Monitoring Tabs -->
+            <div class="row">
+                <div class="col-md-12 mb-4">
+                    <div class="card">
+                        <div class="card-header bg-info text-white">
+                            <ul class="nav nav-tabs card-header-tabs" id="monitoringTabs" role="tablist">
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link active" id="history-tab" data-bs-toggle="tab"
+                                            data-bs-target="#history" type="button" role="tab"
+                                            aria-controls="history" aria-selected="true"
+                                            @onclick="() => LoadJobHistory()">
+                                        <i class="bi bi-clock-history"></i> Körningshistorik
+                                    </button>
+                                </li>
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link" id="statistics-tab" data-bs-toggle="tab"
+                                            data-bs-target="#statistics" type="button" role="tab"
+                                            aria-controls="statistics" aria-selected="false"
+                                            @onclick="() => LoadJobStatistics()">
+                                        <i class="bi bi-graph-up"></i> Statistik
+                                    </button>
+                                </li>
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link" id="performance-tab" data-bs-toggle="tab"
+                                            data-bs-target="#performance" type="button" role="tab"
+                                            aria-controls="performance" aria-selected="false"
+                                            @onclick="() => LoadPerformanceMetrics()">
+                                        <i class="bi bi-speedometer2"></i> Prestanda
+                                    </button>
+                                </li>
+                            </ul>
+                        </div>
+                        <div class="card-body">
+                            <div class="tab-content" id="monitoringTabsContent">
+                                <!-- Job History Tab -->
+                                <div class="tab-pane fade show active" id="history" role="tabpanel" aria-labelledby="history-tab">
+                                    @if (isLoadingHistory)
+                                    {
+                                        <div class="d-flex justify-content-center my-3">
+                                            <div class="spinner-border text-primary" role="status">
+                                                <span class="visually-hidden">Laddar historik...</span>
+                                            </div>
+                                        </div>
+                                    }
+                                    else if (jobExecutions.Any())
+                                    {
+                                        <div class="table-responsive">
+                                            <table class="table table-striped table-hover">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Tid</th>
+                                                        <th>Status</th>
+                                                        <th>Varaktighet</th>
+                                                        <th>Felmeddelande</th>
+                                                        <th>Åtgärder</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    @foreach (var execution in jobExecutions.Take(20))
+                                                    {
+                                                        <tr>
+                                                            <td>
+                                                                <small>@execution.StartTime.ToString("yyyy-MM-dd HH:mm:ss")</small>
+                                                            </td>
+                                                            <td>
+                                                                @if (execution.Status == "Success")
+                                                                {
+                                                                    <span class="badge bg-success">
+                                                                        <i class="bi bi-check-circle"></i> Framgång
+                                                                    </span>
+                                                                }
+                                                                else if (execution.Status == "Failed")
+                                                                {
+                                                                    <span class="badge bg-danger">
+                                                                        <i class="bi bi-x-circle"></i> Misslyckad
+                                                                    </span>
+                                                                }
+                                                                else
+                                                                {
+                                                                    <span class="badge bg-warning">
+                                                                        <i class="bi bi-clock"></i> @execution.Status
+                                                                    </span>
+                                                                }
+                                                            </td>
+                                                            <td>
+                                                                <small>@execution.Duration ms</small>
+                                                            </td>
+                                                            <td>
+                                                                @if (!string.IsNullOrEmpty(execution.ErrorMessage))
+                                                                {
+                                                                    <small class="text-danger">@execution.ErrorMessage</small>
+                                                                }
+                                                                else
+                                                                {
+                                                                    <small class="text-muted">-</small>
+                                                                }
+                                                            </td>
+                                                            <td>
+                                                                <button class="btn btn-sm btn-outline-info"
+                                                                        @onclick="() => ShowExecutionDetails(execution.Id)">
+                                                                    <i class="bi bi-eye"></i>
+                                                                </button>
+                                                            </td>
+                                                        </tr>
+                                                    }
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                        <div class="d-flex justify-content-between align-items-center mt-3">
+                                            <small class="text-muted">Visar senaste 20 körningarna</small>
+                                            <button class="btn btn-sm btn-outline-primary" @onclick="ExportJobHistory">
+                                                <i class="bi bi-download"></i> Exportera
+                                            </button>
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <div class="alert alert-info">
+                                            <i class="bi bi-info-circle"></i> Ingen körningshistorik hittades för detta arbetsflöde.
+                                        </div>
+                                    }
+                                </div>
+
+                                <!-- Statistics Tab -->
+                                <div class="tab-pane fade" id="statistics" role="tabpanel" aria-labelledby="statistics-tab">
+                                    @if (jobStatistics != null)
+                                    {
+                                        <div class="row">
+                                            <div class="col-md-3">
+                                                <div class="card bg-primary text-white">
+                                                    <div class="card-body text-center">
+                                                        <h4>@jobStatistics.TotalExecutions</h4>
+                                                        <small>Totala körningar</small>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <div class="card bg-success text-white">
+                                                    <div class="card-body text-center">
+                                                        <h4>@jobStatistics.SuccessRate.ToString("F1")%</h4>
+                                                        <small>Framgångsgrad</small>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <div class="card bg-warning text-white">
+                                                    <div class="card-body text-center">
+                                                        <h4>@jobStatistics.AverageExecutionTime.ToString("F0") ms</h4>
+                                                        <small>Genomsnittlig tid</small>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <div class="card @(jobStatistics.HealthStatus == "Healthy" ? "bg-success" : jobStatistics.HealthStatus == "Warning" ? "bg-warning" : "bg-danger") text-white">
+                                                    <div class="card-body text-center">
+                                                        <h4>@jobStatistics.HealthStatus</h4>
+                                                        <small>Hälsostatus</small>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="row mt-3">
+                                            <div class="col-md-6">
+                                                <div class="card">
+                                                    <div class="card-header">
+                                                        <h6 class="mb-0">Körningsdetaljer</h6>
+                                                    </div>
+                                                    <div class="card-body">
+                                                        <p><strong>Senaste körning:</strong> @jobStatistics.LastExecutionTime?.ToString("yyyy-MM-dd HH:mm:ss")</p>
+                                                        <p><strong>Senaste status:</strong>
+                                                            <span class="badge @(jobStatistics.LastExecutionStatus == "Success" ? "bg-success" : "bg-danger")">
+                                                                @jobStatistics.LastExecutionStatus
+                                                            </span>
+                                                        </p>
+                                                        <p><strong>Min/Max tid:</strong> @jobStatistics.MinExecutionTime ms / @jobStatistics.MaxExecutionTime ms</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <div class="card">
+                                                    <div class="card-header">
+                                                        <h6 class="mb-0">Aktivitet</h6>
+                                                    </div>
+                                                    <div class="card-body">
+                                                        <p><strong>Senaste aktivitet:</strong> @(jobStatistics.HasRecentActivity ? "Ja" : "Nej")</p>
+                                                        <p><strong>Misslyckanden:</strong> @(jobStatistics.TotalExecutions - (int)(jobStatistics.TotalExecutions * jobStatistics.SuccessRate / 100))</p>
+                                                        <p><strong>Framgångar:</strong> @((int)(jobStatistics.TotalExecutions * jobStatistics.SuccessRate / 100))</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <div class="alert alert-info">
+                                            <i class="bi bi-info-circle"></i> Ingen statistik tillgänglig. Klicka för att ladda data.
+                                        </div>
+                                    }
+                                </div>
+
+                                <!-- Performance Tab -->
+                                <div class="tab-pane fade" id="performance" role="tabpanel" aria-labelledby="performance-tab">
+                                    <div class="alert alert-info">
+                                        <i class="bi bi-info-circle"></i> Prestandamätningar kommer snart. Denna flik kommer att visa detaljerade prestandagrafer och trender.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+
+            <div class="row">
+                <div class="col-md-12 text-center">
+                    <button type="button" class="btn btn-primary" @onclick="SaveSchedule">
+                        <i class="bi bi-save"></i> Spara schema
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary ms-2" @onclick="ClearSelection">
+                        <i class="bi bi-x-circle"></i> Avbryt
+                    </button>
+                </div>
+            </div>
+        }
+
+        <div class="row mt-4">
+            <div class="col-md-12">
+                <div class="card">
+                    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">Schemalagda arbetsflöden</h5>
+                        <button type="button" class="btn btn-sm btn-light" @onclick="LoadSchedules">
+                            <i class="bi bi-arrow-clockwise"></i> Uppdatera
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        @if (schedules.Any())
+                        {
+                            <div class="table-responsive">
+                                <table class="table table-striped table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>Namn</th>
+                                            <th>Schema</th>
+                                            <th>Status</th>
+                                            <th>Prestanda</th>
+                                            <th>Senast körd</th>
+                                            <th>Nästa körning</th>
+                                            <th>Åtgärder</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var schedule in schedules)
+                                        {
+                                            <tr>
+                                                <td>
+                                                    <strong>@schedule.Name</strong>
+                                                    @if (!string.IsNullOrEmpty(schedule.Description))
+                                                    {
+                                                        <br><small class="text-muted">@schedule.Description</small>
+                                                    }
+                                                </td>
+                                                <td>
+                                                    <code class="bg-light px-2 py-1 rounded">@schedule.Schedule</code>
+                                                    <br><small class="text-muted">@GetCronDescription(schedule.Schedule)</small>
+                                                </td>
+                                                <td>
+                                                    @if (schedule.IsQuartzManaged)
+                                                    {
+                                                        <span class="badge bg-primary mb-1">
+                                                            <i class="bi bi-gear"></i> Quartz.NET
+                                                        </span>
+                                                        <br>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span class="badge bg-warning mb-1">
+                                                            <i class="bi bi-exclamation-triangle"></i> Legacy
+                                                        </span>
+                                                        <br>
+                                                    }
+
+                                                    @if (schedule.Enabled)
+                                                    {
+                                                        <span class="badge bg-success">
+                                                            <i class="bi bi-play-circle"></i> Aktiv
+                                                        </span>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span class="badge bg-secondary">
+                                                            <i class="bi bi-pause-circle"></i> Pausad
+                                                        </span>
+                                                    }
+
+                                                    @if (schedule.ConsecutiveFailures > 0)
+                                                    {
+                                                        <br>
+                                                        <span class="badge bg-danger">
+                                                            <i class="bi bi-exclamation-circle"></i> @schedule.ConsecutiveFailures fel
+                                                        </span>
+                                                    }
+                                                </td>
+                                                <td>
+                                                    @if (schedule.IsQuartzManaged && schedule.TotalExecutions > 0)
+                                                    {
+                                                        <div class="small">
+                                                            <div class="mb-1">
+                                                                <strong>@schedule.SuccessRate.ToString("F1")%</strong> framgång
+                                                            </div>
+                                                            <div class="mb-1">
+                                                                <i class="bi bi-arrow-repeat"></i> @schedule.TotalExecutions körningar
+                                                            </div>
+                                                            @if (!string.IsNullOrEmpty(schedule.AverageExecutionTime))
+                                                            {
+                                                                <div class="text-muted">
+                                                                    <i class="bi bi-clock"></i> ⌀ @schedule.AverageExecutionTime
+                                                                </div>
+                                                            }
+                                                        </div>
+                                                    }
+                                                    else
+                                                    {
+                                                        <small class="text-muted">Ingen data</small>
+                                                    }
+                                                </td>
+                                                <td>
+                                                    @if (schedule.LastExecuted.HasValue)
+                                                    {
+                                                        <span>@schedule.LastExecuted.Value.ToString("yyyy-MM-dd")</span>
+                                                        <br><small class="text-muted">@schedule.LastExecuted.Value.ToString("HH:mm:ss")</small>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span class="text-muted">Aldrig körd</span>
+                                                    }
+                                                </td>
+                                                <td>
+                                                    @if (schedule.NextExecutionTime.HasValue)
+                                                    {
+                                                        <span>@schedule.NextExecutionTime.Value.ToString("yyyy-MM-dd")</span>
+                                                        <br><small class="text-muted">@schedule.NextExecutionTime.Value.ToString("HH:mm:ss")</small>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span class="text-muted">Inte schemalagd</span>
+                                                    }
+                                                </td>
+                                                <td>
+                                                    <div class="btn-group-vertical btn-group-sm">
+                                                        <button type="button" class="btn btn-outline-primary btn-sm" @onclick="() => EditSchedule(schedule)">
+                                                            <i class="bi bi-pencil"></i> Redigera
+                                                        </button>
+                                                        <button type="button" class="btn btn-outline-success btn-sm" @onclick="() => TriggerWorkflowNow(schedule)">
+                                                            <i class="bi bi-play"></i> Kör nu
+                                                        </button>
+                                                        <button type="button" class="btn btn-outline-primary btn-sm" @onclick="() => PauseResumeWorkflow(schedule)">
+                                                            @if (schedule.Enabled)
+                                                            {
+                                                                <i class="bi bi-pause"></i> <span>Pausa</span>
+                                                            }
+                                                            else
+                                                            {
+                                                                <i class="bi bi-play-circle"></i> <span>Återuppta</span>
+                                                            }
+                                                        </button>
+                                                        @if (schedule.IsQuartzManaged)
+                                                        {
+                                                            <button type="button" class="btn btn-outline-info btn-sm" @onclick="() => ViewWorkflowHistory(schedule.Id)">
+                                                                <i class="bi bi-clock-history"></i> Historik
+                                                            </button>
+                                                        }
+                                                    </div>
+                                                            <button type="button" class="btn btn-outline-danger btn-sm" @onclick="() => ConfirmDeleteSchedule(schedule)">
+                                                                <i class="bi bi-trash"></i> Radera
+                                                            </button>
+                                                </td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        }
+                        else
+                        {                        <div class="alert alert-info">
+                            Inga schemalagda arbetsflöden hittades. Använd formuläret ovan för att schemalägga ett arbetsflöde.
+                            <hr />
+                            <p><strong>Debug info:</strong></p>
+                            <p>Antal schemalagda arbetsflöden: @schedules.Count</p>
+                            <p>Server URL: @WorkflowService.GetBaseAddress()</p>
+                            <p>Inläsningsstatus: @(isLoading ? "Laddar..." : "Klar")</p>
+                            <p>Felmeddelande: @(errorMessage ?? "Inget fel")</p>
+                            @if (schedules.Count > 0)
+                            {
+                                <ul>
+                                    @foreach (var s in schedules)
+                                    {
+                                        <li>@s.Id - @s.Name - @s.Schedule - @s.Description - @(s.Enabled ? "Aktiv" : "Inaktiv")</li>
+                                    }
+                                </ul>
+                            }
+                            <hr />
+                            <button class="btn btn-warning" @onclick="ForceManualRefresh">Tvinga uppdatering och manuell renderingsuppdatering</button>
+                        </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private List<WorkflowInfo> workflows = new List<WorkflowInfo>();
+    private List<WorkflowScheduleInfo> schedules = new List<WorkflowScheduleInfo>();
+    private WorkflowScheduleInfo? selectedWorkflow;
+    private string selectedWorkflowId = string.Empty;
+    private bool isSchedulingEnabled = false;
+
+    // Schedule input variables
+    private bool useHumanReadableFormat = true;
+    private string cronExpression = "0 9 * * 1-5";
+    private string humanScheduleExpression = "daily at 9am";
+    private string cronDescription = string.Empty;
+
+    // Schedule validation
+    private bool scheduleIsValid = false;
+    private string scheduleValidationMessage = string.Empty;
+    private string scheduleDescription = string.Empty;
+
+    // Advanced settings
+    private bool showAdvancedSettings = false;
+    private string selectedTimezone = "Europe/Stockholm";
+    private string selectedMisfireHandling = "Skip";
+    private string customScheduleDescription = string.Empty;
+
+    // Workflow navigation settings
+    private string onSuccessStep = string.Empty;
+    private string onErrorStep = string.Empty;
+    private string onSuccessValidation = string.Empty;
+    private string onErrorValidation = string.Empty;
+    private List<string> availableSteps = new List<string>();
+
+    // Job history and monitoring
+    private List<JobExecutionRecord> jobExecutions = new List<JobExecutionRecord>();
+    private JobStatistics? jobStatistics;
+    private bool isLoadingHistory = false;
+    private PerformanceMetrics? performanceMetrics;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try {
+            await LoadWorkflows();
+            await LoadSchedules();
+            ValidateCurrentSchedule(); // Validate initial schedule
+        }
+        catch (Exception ex) {
+            errorMessage = $"Error initializing: {ex.Message}";
+        }
+        finally {
+            isLoading = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            try
+            {
+                await SafeJSLog("OnInitializedAsync: Starting initialization...");
+                await SafeJSLog($"OnInitializedAsync: Completed initialization. Schedules count: {schedules.Count}");
+            }
+            catch (Exception ex)
+            {
+                await SafeJSError($"OnInitializedAsync error: {ex.Message}");
+            }
+        }
+    }
+
+    private string? errorMessage;
+    private bool isLoading = true;
+
+    private async Task LoadWorkflows()
+    {
+        isLoading = true;
+        errorMessage = null;
+        try
+        {
+            await SafeJSLog("LoadWorkflows: Starting to load workflows...");
+            var result = await WorkflowService.GetWorkflowsAsync();
+
+            await SafeJSLog($"LoadWorkflows: Got {result?.Count ?? 0} workflows");
+
+            if (result != null)
+            {
+                // Convert WorkflowModel to WorkflowInfo for the scheduler
+                workflows = result.Select(w => new WorkflowInfo
+                {
+                    Id = w.Id,
+                    Name = w.Name,
+                    Description = w.Description,
+                    Enabled = w.Enabled,
+                    ExecutionType = w.ExecutionType,
+                    Schedule = w.Schedule ?? ""
+                }).ToList();
+
+                await SafeJSLog($"LoadWorkflows: Converted to {workflows.Count} WorkflowInfo items");
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error loading workflows: {ex.Message}";
+            await SafeJSError(errorMessage);
+        }
+        finally
+        {
+            isLoading = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task LoadSchedules()
+    {
+        try
+        {
+            await SafeJSLog("LoadSchedules: Starting to load schedules...");
+            await SafeJSLog($"HTTP Client BaseAddress: {WorkflowService.GetBaseAddress()}");
+
+            var result = await WorkflowService.GetScheduledWorkflowsAsync();
+
+            await SafeJSLog($"LoadSchedules: Got {result?.Count ?? 0} legacy workflows");
+
+            // Load from both old system and new Quartz.NET system
+            var quartzResult = await LoadQuartzSchedules();
+
+            // Combine results, prioritizing Quartz.NET data
+            var combinedSchedules = new List<WorkflowScheduleInfo>();
+
+            // Add Quartz.NET schedules first
+            if (quartzResult != null)
+            {
+                combinedSchedules.AddRange(quartzResult);
+            }
+
+            // Add legacy schedules that aren't already in Quartz
+            if (result != null)
+            {
+                foreach (var legacy in result)
+                {
+                    if (!combinedSchedules.Any(q => q.Id == legacy.Id))
+                    {
+                        combinedSchedules.Add(new WorkflowScheduleInfo
+                        {
+                            Id = legacy.Id,
+                            Name = legacy.Name,
+                            Description = legacy.Description ?? string.Empty,
+                            Schedule = legacy.Schedule,
+                            Enabled = legacy.Enabled,
+                            LastExecuted = legacy.LastExecuted,
+                            NextExecutionTime = legacy.NextExecutionTime,
+                            IsQuartzManaged = false,
+                            Status = legacy.Enabled ? "Legacy" : "Disabled"
+                        });
+                    }
+                }
+            }
+
+            schedules = combinedSchedules;
+
+            // Logga resultaten för felsökning
+            await SafeJSLog($"LoadSchedules: Got {schedules.Count} total workflows ({quartzResult?.Count ?? 0} Quartz, {result?.Count ?? 0} legacy)");
+
+            foreach (var s in schedules)
+            {
+                await SafeJSLog($"Schedule: {s.Id} - {s.Name} - {s.Schedule} - Quartz: {s.IsQuartzManaged} - Status: {s.Status}");
+            }
+
+            if (schedules.Count == 0)
+            {
+                await SafeJSLog("LoadSchedules: No schedules found, adding test item");
+
+                // Lägg till ett testarbetsflöde för att testa UI rendering
+                schedules.Add(new WorkflowScheduleInfo
+                {
+                    Id = "test-workflow-ui",
+                    Name = "Test UI Rendering",
+                    Description = "Detta är ett testschema för att verifiera UI-rendering",
+                    Schedule = "0 9 * * 1-5",
+                    Enabled = true,
+                    IsQuartzManaged = false,
+                    Status = "Test",
+                    SuccessRate = 95.5,
+                    TotalExecutions = 42,
+                    AverageExecutionTime = "00:02:15"
+                });
+            }
+        }
+        catch (Exception ex)
+        {
+            await SafeJSError($"LoadSchedules error: {ex.Message}");
+            await SafeJSError(ex.StackTrace ?? "No stack trace available");
+            schedules = new List<WorkflowScheduleInfo>();
+        }
+
+        // Ensure UI is updated
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task<List<WorkflowScheduleInfo>?> LoadQuartzSchedules()
+    {
+        try
+        {
+            await SafeJSLog("LoadQuartzSchedules: Loading from Quartz.NET API...");
+
+            // Call the new Quartz.NET monitoring API
+            var response = await Http.GetAsync("https://localhost:7042/api/monitoring/metrics");
+            if (response.IsSuccessStatusCode)
+            {
+                var content = await response.Content.ReadAsStringAsync();
+                var metricsData = JsonSerializer.Deserialize<Dictionary<string, QuartzWorkflowMetrics>>(content, new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                });
+
+                if (metricsData != null)
+                {
+                    var quartzSchedules = new List<WorkflowScheduleInfo>();
+
+                    foreach (var kvp in metricsData)
+                    {
+                        var metrics = kvp.Value;
+                        quartzSchedules.Add(new WorkflowScheduleInfo
+                        {
+                            Id = metrics.WorkflowId,
+                            Name = metrics.WorkflowName,
+                            Description = $"Quartz.NET managed workflow - {metrics.TotalExecutions} executions",
+                            Schedule = "Managed by Quartz.NET", // We'd need additional API call to get actual schedule
+                            Enabled = true,
+                            LastExecuted = metrics.LastExecutionTime,
+                            NextExecutionTime = null, // Would need additional API call
+                            IsQuartzManaged = true,
+                            SuccessRate = metrics.SuccessRate,
+                            TotalExecutions = metrics.TotalExecutions,
+                            AverageExecutionTime = metrics.AverageExecutionTime,
+                            ConsecutiveFailures = metrics.ConsecutiveFailures
+                        });
+                    }
+
+                    await SafeJSLog($"LoadQuartzSchedules: Loaded {quartzSchedules.Count} Quartz workflows");
+                    return quartzSchedules;
+                }
+            }
+            else
+            {
+                await SafeJSLog($"LoadQuartzSchedules: API call failed with status {response.StatusCode}");
+            }
+        }
+        catch (Exception ex)
+        {
+            await SafeJSError($"LoadQuartzSchedules error: {ex.Message}");
+        }
+
+        return null;
+    }
+
+    private async Task TriggerWorkflowNow(WorkflowScheduleInfo workflow)
+    {
+        try
+        {
+            await SafeJSLog($"TriggerWorkflowNow: Triggering workflow {workflow.Id}");
+
+            if (workflow.IsQuartzManaged)
+            {
+                // Use Quartz.NET API to trigger workflow
+                var response = await Http.PostAsync($"https://localhost:7042/api/workflows/{workflow.Id}/trigger", null);
+                if (response.IsSuccessStatusCode)
+                {
+                    await JS.InvokeVoidAsync("alert", $"Workflow '{workflow.Name}' triggered successfully!");
+                    await LoadSchedules(); // Refresh to show updated status
+                }
+                else
+                {
+                    await JS.InvokeVoidAsync("alert", $"Failed to trigger workflow: {response.StatusCode}");
+                }
+            }
+            else
+            {
+                // Use legacy API
+                var success = await WorkflowService.TriggerWorkflowAsync(workflow.Id);
+                if (success)
+                {
+                    await JS.InvokeVoidAsync("alert", $"Workflow '{workflow.Name}' triggered successfully!");
+                    await LoadSchedules();
+                }
+                else
+                {
+                    await JS.InvokeVoidAsync("alert", "Failed to trigger workflow");
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            await SafeJSError($"TriggerWorkflowNow error: {ex.Message}");
+            await JS.InvokeVoidAsync("alert", $"Error triggering workflow: {ex.Message}");
+        }
+    }
+
+    private async Task PauseResumeWorkflow(WorkflowScheduleInfo workflow)
+    {
+        try
+        {
+            await SafeJSLog($"PauseResumeWorkflow: {(workflow.Enabled ? "Pausing" : "Resuming")} workflow {workflow.Id}");
+
+            if (workflow.IsQuartzManaged)
+            {
+                // Use Quartz.NET API
+                var action = workflow.Enabled ? "pause" : "resume";
+                var response = await Http.PostAsync($"https://localhost:7042/api/workflows/{workflow.Id}/{action}", null);
+
+                if (response.IsSuccessStatusCode)
+                {
+                    await JS.InvokeVoidAsync("alert", $"Workflow '{workflow.Name}' {action}d successfully!");
+                    await LoadSchedules(); // Refresh to show updated status
+                }
+                else
+                {
+                    await JS.InvokeVoidAsync("alert", $"Failed to {action} workflow: {response.StatusCode}");
+                }
+            }
+            else
+            {
+                // Use legacy API
+                var update = new WorkflowScheduleUpdateModel
+                {
+                    Schedule = workflow.Schedule,
+                    Enabled = !workflow.Enabled
+                };
+
+                var success = await WorkflowService.UpdateWorkflowScheduleAsync(workflow.Id, update);
+                if (success)
+                {
+                    await JS.InvokeVoidAsync("alert", $"Workflow '{workflow.Name}' {(workflow.Enabled ? "disabled" : "enabled")} successfully!");
+                    await LoadSchedules();
+                }
+                else
+                {
+                    await JS.InvokeVoidAsync("alert", "Failed to update workflow status");
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            await SafeJSError($"PauseResumeWorkflow error: {ex.Message}");
+            await JS.InvokeVoidAsync("alert", $"Error updating workflow: {ex.Message}");
+        }
+    }
+
+    private async Task ViewWorkflowHistory(string workflowId)
+    {
+        try
+        {
+            await SafeJSLog($"ViewWorkflowHistory: Opening history for workflow {workflowId}");
+
+            // For now, just show an alert. In a real implementation, this would open a modal or navigate to a history page
+            await JS.InvokeVoidAsync("alert", $"Workflow history for '{workflowId}' would be displayed here.\n\nThis feature will show:\n- Execution history\n- Success/failure rates\n- Performance metrics\n- Error logs");
+        }
+        catch (Exception ex)
+        {
+            await SafeJSError($"ViewWorkflowHistory error: {ex.Message}");
+        }
+    }
+
+    private async Task OnWorkflowSelected(ChangeEventArgs e)
+    {
+        if (e.Value == null || string.IsNullOrEmpty(e.Value.ToString()))
+        {
+            selectedWorkflow = null;
+            isSchedulingEnabled = false;
+            availableSteps.Clear();
+            onSuccessStep = string.Empty;
+            onErrorStep = string.Empty;
+            onSuccessValidation = string.Empty;
+            onErrorValidation = string.Empty;
+            return;
+        }
+
+        var id = e.Value.ToString();
+        selectedWorkflowId = id!;
+
+        // Check if this workflow already has a schedule
+        var existingSchedule = schedules.FirstOrDefault(s => s.Id == id);
+        if (existingSchedule != null)
+        {
+            selectedWorkflow = existingSchedule;
+            isSchedulingEnabled = true;
+            cronExpression = existingSchedule.Schedule;
+            UpdateCronDescription();
+        }
+        else
+        {
+            // Find the workflow in the workflows list
+            var workflow = workflows.FirstOrDefault(w => w.Id == id);
+            if (workflow != null)
+            {
+                selectedWorkflow = new WorkflowScheduleInfo
+                {
+                    Id = workflow.Id,
+                    Name = workflow.Name,
+                    Description = workflow.Description,
+                    Schedule = cronExpression,
+                    Enabled = false
+                };
+                isSchedulingEnabled = false;
+            }
+        }
+
+        // Load available steps for navigation validation
+        if (selectedWorkflow != null)
+        {
+            await LoadAvailableSteps();
+
+            // Clear previous navigation settings
+            onSuccessStep = string.Empty;
+            onErrorStep = string.Empty;
+            onSuccessValidation = string.Empty;
+            onErrorValidation = string.Empty;
+        }
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task SaveSchedule()
+    {
+        if (selectedWorkflow == null || string.IsNullOrEmpty(selectedWorkflow.Id))
+        {
+            return;
+        }
+
+        try
+        {
+            // Validate schedule before saving
+            ValidateCurrentSchedule();
+            if (!scheduleIsValid)
+            {
+                await JS.InvokeVoidAsync("alert", $"Ogiltigt schema: {scheduleValidationMessage}");
+                return;
+            }
+
+            // Use the appropriate schedule expression based on format
+            var scheduleExpression = useHumanReadableFormat ? humanScheduleExpression : cronExpression;
+
+            var update = new WorkflowScheduleUpdateModel
+            {
+                Schedule = scheduleExpression,
+                Enabled = isSchedulingEnabled,
+                Timezone = selectedTimezone,
+                MisfireHandling = selectedMisfireHandling,
+                OnSuccess = string.IsNullOrWhiteSpace(onSuccessStep) ? null : onSuccessStep,
+                OnError = string.IsNullOrWhiteSpace(onErrorStep) ? null : onErrorStep
+            };
+
+            var success = await WorkflowService.UpdateWorkflowScheduleAsync(selectedWorkflow.Id, update);
+            if (success)
+            {
+                await JS.InvokeVoidAsync("alert", "Workflow schema sparades framgångsrikt!");
+                await LoadSchedules();
+            }
+            else
+            {
+                await JS.InvokeVoidAsync("alert", "Fel vid sparande av schema.");
+            }
+        }
+        catch (Exception ex)
+        {
+            await SafeJSError($"Error saving schedule: {ex.Message}");
+            await JS.InvokeVoidAsync("alert", $"Fel vid sparande av schema: {ex.Message}");
+        }
+    }
+
+    private void SetCronExpression(string cron)
+    {
+        cronExpression = cron;
+        UpdateCronDescription();
+    }
+
+    private async Task EditSchedule(WorkflowScheduleInfo schedule)
+    {
+        selectedWorkflowId = schedule.Id;
+        selectedWorkflow = schedule;
+        isSchedulingEnabled = schedule.Enabled;
+        cronExpression = schedule.Schedule;
+        UpdateCronDescription();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private void ClearSelection()
+    {
+        selectedWorkflowId = string.Empty;
+        selectedWorkflow = null;
+        isSchedulingEnabled = false;
+        cronExpression = "0 9 * * 1-5";
+        UpdateCronDescription();
+    }
+
+    private void UpdateCronDescription()
+    {
+        try
+        {
+            cronDescription = GetCronDescription(cronExpression);
+        }
+        catch
+        {
+            cronDescription = string.Empty;
+        }
+    }
+
+    // New methods for enhanced UI
+    private void SetScheduleFormat(bool useHumanReadable)
+    {
+        useHumanReadableFormat = useHumanReadable;
+        ValidateCurrentSchedule();
+        StateHasChanged();
+    }
+
+    private void SetHumanSchedule(string schedule)
+    {
+        humanScheduleExpression = schedule;
+        ValidateCurrentSchedule();
+        StateHasChanged();
+    }
+
+    private void OnScheduleInputChanged(ChangeEventArgs e)
+    {
+        // Update the appropriate variable based on format
+        if (useHumanReadableFormat)
+        {
+            humanScheduleExpression = e.Value?.ToString() ?? string.Empty;
+        }
+        else
+        {
+            cronExpression = e.Value?.ToString() ?? string.Empty;
+        }
+
+        // Validate the current schedule
+        ValidateCurrentSchedule();
+        StateHasChanged();
+    }
+
+    private void ToggleAdvancedSettings()
+    {
+        showAdvancedSettings = !showAdvancedSettings;
+        StateHasChanged();
+    }
+
+    private async Task OnNavigationStepChanged(ChangeEventArgs e)
+    {
+        await ValidateNavigationSteps();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task ValidateNavigationSteps()
+    {
+        onSuccessValidation = string.Empty;
+        onErrorValidation = string.Empty;
+
+        if (selectedWorkflow != null)
+        {
+            try
+            {
+                // Load available steps from the selected workflow
+                await LoadAvailableSteps();
+
+                // Validate OnSuccess step
+                if (!string.IsNullOrWhiteSpace(onSuccessStep))
+                {
+                    if (!IsValidStepReference(onSuccessStep))
+                    {
+                        onSuccessValidation = $"Steg '{onSuccessStep}' finns inte i arbetsflödet";
+                    }
+                }
+
+                // Validate OnError step
+                if (!string.IsNullOrWhiteSpace(onErrorStep))
+                {
+                    if (!IsValidStepReference(onErrorStep))
+                    {
+                        onErrorValidation = $"Steg '{onErrorStep}' finns inte i arbetsflödet";
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                await SafeJSError($"Error validating navigation steps: {ex.Message}");
+            }
+        }
+    }
+
+    private async Task LoadAvailableSteps()
+    {
+        availableSteps.Clear();
+
+        if (selectedWorkflow != null)
+        {
+            try
+            {
+                // Get workflow details to extract step IDs
+                var workflowDetails = await WorkflowService.GetWorkflowAsync(selectedWorkflow.Id);
+                if (workflowDetails != null && workflowDetails.Steps != null)
+                {
+                    foreach (var step in workflowDetails.Steps)
+                    {
+                        if (!string.IsNullOrWhiteSpace(step.Name))
+                        {
+                            // Use step name as the ID for navigation
+                            availableSteps.Add(step.Name);
+                        }
+                    }
+                }
+
+                // Add special step names
+                availableSteps.AddRange(new[] { "completed", "failed", "cancelled", "end", "exit" });
+            }
+            catch (Exception ex)
+            {
+                await SafeJSError($"Error loading available steps: {ex.Message}");
+            }
+        }
+    }
+
+    private bool IsValidStepReference(string stepName)
+    {
+        if (string.IsNullOrWhiteSpace(stepName))
+            return true;
+
+        // Check if it's a special step name
+        var specialSteps = new[] { "completed", "failed", "cancelled", "end", "exit" };
+        if (specialSteps.Contains(stepName, StringComparer.OrdinalIgnoreCase))
+            return true;
+
+        // Check if it's in the available steps
+        return availableSteps.Contains(stepName, StringComparer.OrdinalIgnoreCase);
+    }
+
+    private void ValidateCurrentSchedule()
+    {
+        try
+        {
+            var scheduleToValidate = useHumanReadableFormat ? humanScheduleExpression : cronExpression;
+
+            if (string.IsNullOrWhiteSpace(scheduleToValidate))
+            {
+                scheduleIsValid = false;
+                scheduleValidationMessage = "Schema kan inte vara tomt";
+                scheduleDescription = string.Empty;
+                return;
+            }
+
+            // Here we would call the Agent API to validate the schedule
+            // For now, we'll do basic validation
+            if (useHumanReadableFormat)
+            {
+                scheduleIsValid = ValidateHumanReadableSchedule(scheduleToValidate);
+                scheduleValidationMessage = scheduleIsValid ?
+                    "Giltigt läsbart schema" :
+                    "Ogiltigt läsbart schema. Försök med format som 'daily at 9am' eller 'every monday at 2pm'";
+                scheduleDescription = scheduleIsValid ? GetHumanScheduleDescription(scheduleToValidate) : string.Empty;
+            }
+            else
+            {
+                scheduleIsValid = ValidateCronExpression(scheduleToValidate);
+                scheduleValidationMessage = scheduleIsValid ?
+                    "Giltigt CRON-uttryck" :
+                    "Ogiltigt CRON-uttryck. Använd format som '0 9 * * *' eller '*/5 * * * *'";
+                scheduleDescription = scheduleIsValid ? GetCronDescription(scheduleToValidate) : string.Empty;
+            }
+        }
+        catch (Exception ex)
+        {
+            scheduleIsValid = false;
+            scheduleValidationMessage = $"Fel vid validering: {ex.Message}";
+            scheduleDescription = string.Empty;
+        }
+    }
+
+    private bool ValidateHumanReadableSchedule(string schedule)
+    {
+        var lowerSchedule = schedule.ToLowerInvariant().Trim();
+
+        // Basic validation for common patterns
+        if (lowerSchedule == "hourly" || lowerSchedule == "daily" ||
+            lowerSchedule == "weekly" || lowerSchedule == "monthly")
+            return true;
+
+        if (lowerSchedule.StartsWith("daily at ") && lowerSchedule.Contains("am") || lowerSchedule.Contains("pm"))
+            return true;
+
+        if (lowerSchedule.StartsWith("every ") && lowerSchedule.Contains(" at ") &&
+            (lowerSchedule.Contains("am") || lowerSchedule.Contains("pm")))
+            return true;
+
+        return false;
+    }
+
+    private bool ValidateCronExpression(string cron)
+    {
+        if (string.IsNullOrWhiteSpace(cron))
+            return false;
+
+        var parts = cron.Split(' ');
+        return parts.Length == 5 || parts.Length == 6; // Basic validation
+    }
+
+    private string GetHumanScheduleDescription(string schedule)
+    {
+        var lowerSchedule = schedule.ToLowerInvariant().Trim();
+
+        return lowerSchedule switch
+        {
+            "hourly" => "Körs varje timme",
+            "daily" => "Körs dagligen kl 09:00",
+            "weekly" => "Körs veckovis på måndag kl 09:00",
+            "monthly" => "Körs månadsvis den 1:a kl 09:00",
+            _ when lowerSchedule.StartsWith("daily at ") => $"Körs dagligen {lowerSchedule.Substring("daily at ".Length)}",
+            _ when lowerSchedule.StartsWith("every ") => $"Körs {lowerSchedule}",
+            _ => "Anpassat schema"
+        };
+    }
+
+    private string GetCronDescription(string cron)
+    {
+        // This is a simplified CRON description function
+        // In a real app, you would want to use a proper CRON parser library
+
+        if (string.IsNullOrEmpty(cron))
+            return string.Empty;
+
+        var parts = cron.Split(' ');
+        if (parts.Length != 5)
+            return "Invalid CRON expression";
+
+        var minute = parts[0];
+        var hour = parts[1];
+        var dayOfMonth = parts[2];
+        var month = parts[3];
+        var dayOfWeek = parts[4];
+
+        // Simplified description generator
+        if (minute == "0" && hour == "9" && dayOfMonth == "*" && month == "*" && dayOfWeek == "*")
+            return "Runs daily at 9:00 AM";
+
+        if (minute == "0" && hour == "9" && dayOfMonth == "*" && month == "*" && dayOfWeek == "1-5")
+            return "Runs every weekday at 9:00 AM";
+
+        if (minute == "0" && hour == "*/2" && dayOfMonth == "*" && month == "*" && dayOfWeek == "*")
+            return "Runs every 2 hours";
+
+        if (minute == "0" && hour == "0" && dayOfMonth == "1" && month == "*" && dayOfWeek == "*")
+            return "Runs at midnight on the first day of every month";
+
+        if (minute == "0" && hour == "9" && dayOfMonth == "*/2" && month == "*" && dayOfWeek == "*")
+            return "Runs at 9:00 AM every other day";
+
+        return $"Runs at custom schedule: {cron}";
+    }
+
+    public class WorkflowInfo
+    {
+        public string Id { get; set; } = string.Empty;
+        public string Name { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
+        public bool Enabled { get; set; }
+        public string ExecutionType { get; set; } = string.Empty;
+        public string Schedule { get; set; } = string.Empty;
+    }
+
+    public class WorkflowScheduleInfo
+    {
+        public string Id { get; set; } = string.Empty;
+        public string Name { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
+        public string Schedule { get; set; } = string.Empty;
+        public bool Enabled { get; set; }
+        public DateTime? LastExecuted { get; set; }
+        public DateTime? NextExecutionTime { get; set; }
+
+        // Enhanced Quartz.NET properties
+        public bool IsQuartzManaged { get; set; } = false;
+        public double SuccessRate { get; set; } = 0;
+        public int TotalExecutions { get; set; } = 0;
+        public string AverageExecutionTime { get; set; } = string.Empty;
+        public int ConsecutiveFailures { get; set; } = 0;
+        public string Status { get; set; } = "Unknown";
+    }
+
+    public class WorkflowScheduleUpdate
+    {
+        public string Schedule { get; set; } = string.Empty;
+        public bool Enabled { get; set; }
+    }
+    private async Task ConfirmDeleteSchedule(WorkflowScheduleInfo schedule)
+    {
+        try
+        {
+            var ok = await JS.InvokeAsync<bool>("confirm", $"Radera schemat '{schedule.Name}'? Detta kan inte ångras.");
+            if (!ok) return;
+
+            var success = await DeleteSchedule(schedule);
+            if (success)
+            {
+                schedules.Remove(schedule);
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Fel vid radering: {ex.Message}";
+        }
+    }
+
+    private async Task<bool> DeleteSchedule(WorkflowScheduleInfo schedule)
+    {
+        try
+        {
+            // Quartz-managed job: use Quartz Admin delete endpoint
+            if (schedule.IsQuartzManaged)
+            {
+                var response = await WorkflowService.HttpClient.DeleteAsync($"/api/QuartzAdmin/jobs/{Uri.EscapeDataString(schedule.Id)}?jobGroup=DEFAULT");
+                if (response.IsSuccessStatusCode)
+                {
+                    return true;
+                }
+                else
+                {
+                    errorMessage = $"Kunde inte radera Quartz-jobb: {response.StatusCode}";
+                    return false;
+                }
+            }
+            else
+            {
+                // Legacy: delete the underlying workflow definition
+                var ok = await WorkflowService.DeleteWorkflowAsync(schedule.Id);
+                if (!ok)
+                {
+                    errorMessage = "Kunde inte radera arbetsflödet via API";
+                }
+                return ok;
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Fel vid radering: {ex.Message}";
+            return false;
+        }
+    }
+
+
+    // Workflow management methods
+    private async Task TriggerWorkflow(string workflowId)
+    {
+        try
+        {
+            var success = await WorkflowService.RunWorkflowAsync(workflowId);
+            if (success)
+            {
+                await JS.InvokeVoidAsync("alert", $"Workflow '{workflowId}' startades framgångsrikt!");
+                await LoadSchedules(); // Refresh the list
+            }
+            else
+            {
+                await JS.InvokeVoidAsync("alert", $"Fel vid start av workflow '{workflowId}'");
+            }
+        }
+        catch (Exception ex)
+        {
+            await SafeJSError($"Error triggering workflow {workflowId}: {ex.Message}");
+            await JS.InvokeVoidAsync("alert", $"Fel vid start av workflow: {ex.Message}");
+        }
+    }
+
+    private async Task PauseWorkflow(string workflowId)
+    {
+        try
+        {
+            // Call Agent API to pause the workflow job
+            var response = await WorkflowService.HttpClient.PostAsync($"/api/QuartzAdmin/jobs/{workflowId}/pause", null);
+            if (response.IsSuccessStatusCode)
+            {
+                await JS.InvokeVoidAsync("alert", $"Workflow '{workflowId}' pausades framgångsrikt!");
+                await LoadSchedules(); // Refresh the list
+            }
+            else
+            {
+                await JS.InvokeVoidAsync("alert", $"Fel vid pausning av workflow '{workflowId}'");
+            }
+        }
+        catch (Exception ex)
+        {
+            await SafeJSError($"Error pausing workflow {workflowId}: {ex.Message}");
+            await JS.InvokeVoidAsync("alert", $"Fel vid pausning av workflow: {ex.Message}");
+        }
+    }
+
+    private async Task ResumeWorkflow(string workflowId)
+    {
+        try
+        {
+            // Call Agent API to resume the workflow job
+            var response = await WorkflowService.HttpClient.PostAsync($"/api/QuartzAdmin/jobs/{workflowId}/resume", null);
+            if (response.IsSuccessStatusCode)
+            {
+                await JS.InvokeVoidAsync("alert", $"Workflow '{workflowId}' återupptogs framgångsrikt!");
+                await LoadSchedules(); // Refresh the list
+            }
+            else
+            {
+                await JS.InvokeVoidAsync("alert", $"Fel vid återupptagning av workflow '{workflowId}'");
+            }
+        }
+        catch (Exception ex)
+        {
+            await SafeJSError($"Error resuming workflow {workflowId}: {ex.Message}");
+            await JS.InvokeVoidAsync("alert", $"Fel vid återupptagning av workflow: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Tvingar fram en uppdatering av schemalagda arbetsflöden och UI-renderingen
+    /// </summary>
+    private async Task ForceManualRefresh()
+    {
+        try
+        {
+            errorMessage = null;
+            isLoading = true;
+            await InvokeAsync(StateHasChanged);
+
+            await SafeJSLog("ForceManualRefresh: Starting forced refresh...");
+
+            // Töm aktuell lista för att säkerställa en ren start
+            schedules.Clear();
+            await InvokeAsync(StateHasChanged);
+
+            // Hämta data direkt från API:et
+            var result = await WorkflowService.GetScheduledWorkflowsAsync();
+            await SafeJSLog($"ForceManualRefresh: Got {result?.Count ?? 0} scheduled workflows from API");
+
+            if (result != null && result.Count > 0)
+            {
+                // Kopiera till den lokala listan
+                schedules = result.Select(s => new WorkflowScheduleInfo
+                {
+                    Id = s.Id,
+                    Name = s.Name,
+                    Description = s.Description ?? "Ingen beskrivning",
+                    Schedule = s.Schedule,
+                    Enabled = s.Enabled,
+                    LastExecuted = s.LastExecuted,
+                    NextExecutionTime = s.NextExecutionTime
+                }).ToList();
+
+                await SafeJSLog($"ForceManualRefresh: Added {schedules.Count} items to local list");
+
+                // Logga varje schema för felsökning
+                foreach (var s in schedules)
+                {
+                    await SafeJSLog($"Schedule: {s.Id} - {s.Name} - {s.Schedule} - {s.Description}");
+                }
+            }
+            else
+            {
+                // Lägg till ett testarbetsflöde manuellt om API:et inte returnerar något
+                await SafeJSLog("ForceManualRefresh: No workflows returned, adding test workflow");
+
+                schedules.Add(new WorkflowScheduleInfo
+                {
+                    Id = "test-workflow-manual",
+                    Name = "Manuellt tillagt testschema",
+                    Description = "Detta är ett test-schema skapat direkt i UI:t",
+                    Schedule = "0 12 * * *",
+                    Enabled = true,
+                    NextExecutionTime = DateTime.Now.AddHours(12)
+                });
+
+                await SafeJSLog("ForceManualRefresh: Added test workflow to schedules list");
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Fel vid tvingad uppdatering: {ex.Message}";
+            await SafeJSError($"ForceManualRefresh error: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+            await InvokeAsync(StateHasChanged);
+            await SafeJSLog("ForceManualRefresh: Completed");
+        }
+    }
+
+    private async Task SafeJSLog(string message)
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("console.log", message);
+        }
+        catch (Exception)
+        {
+            // Ignore JS interop errors during static rendering
+        }
+    }
+
+    private async Task SafeJSError(string message)
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("console.error", message);
+        }
+        catch (Exception)
+        {
+            // Ignore JS interop errors during static rendering
+        }
+    }
+
+    // Job History and Monitoring Methods
+    private async Task LoadJobHistory()
+    {
+        if (selectedWorkflow == null) return;
+
+        isLoadingHistory = true;
+        try
+        {
+            var response = await Http.GetAsync($"https://localhost:7042/api/JobHistory/executions?workflowId={selectedWorkflow.Id}&pageSize=20");
+            if (response.IsSuccessStatusCode)
+            {
+                var content = await response.Content.ReadAsStringAsync();
+                var executions = System.Text.Json.JsonSerializer.Deserialize<List<JobExecutionRecord>>(content, new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                });
+                jobExecutions = executions ?? new List<JobExecutionRecord>();
+            }
+        }
+        catch (Exception ex)
+        {
+            await SafeJSError($"Error loading job history: {ex.Message}");
+        }
+        finally
+        {
+            isLoadingHistory = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task LoadJobStatistics()
+    {
+        if (selectedWorkflow == null) return;
+
+        try
+        {
+            var response = await Http.GetAsync($"https://localhost:7042/api/JobHistory/statistics?workflowId={selectedWorkflow.Id}");
+            if (response.IsSuccessStatusCode)
+            {
+                var content = await response.Content.ReadAsStringAsync();
+                jobStatistics = System.Text.Json.JsonSerializer.Deserialize<JobStatistics>(content, new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                });
+            }
+        }
+        catch (Exception ex)
+        {
+            await SafeJSError($"Error loading job statistics: {ex.Message}");
+        }
+        finally
+        {
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task LoadPerformanceMetrics()
+    {
+        try
+        {
+            var response = await Http.GetAsync("https://localhost:7042/api/JobHistory/performance");
+            if (response.IsSuccessStatusCode)
+            {
+                var content = await response.Content.ReadAsStringAsync();
+                performanceMetrics = System.Text.Json.JsonSerializer.Deserialize<PerformanceMetrics>(content, new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                });
+            }
+        }
+        catch (Exception ex)
+        {
+            await SafeJSError($"Error loading performance metrics: {ex.Message}");
+        }
+        finally
+        {
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task ShowExecutionDetails(string executionId)
+    {
+        // TODO: Implement execution details modal
+        await SafeJSLog($"Show execution details for: {executionId}");
+    }
+
+    private async Task ExportJobHistory()
+    {
+        if (selectedWorkflow == null) return;
+
+        try
+        {
+            var response = await Http.GetAsync($"https://localhost:7042/api/JobHistory/executions?workflowId={selectedWorkflow.Id}&pageSize=1000");
+            if (response.IsSuccessStatusCode)
+            {
+                var content = await response.Content.ReadAsStringAsync();
+                var fileName = $"job-history-{selectedWorkflow.Id}-{DateTime.Now:yyyyMMdd-HHmmss}.json";
+
+                // Create download link
+                await JS.InvokeVoidAsync("downloadFile", fileName, content, "application/json");
+            }
+        }
+        catch (Exception ex)
+        {
+            await SafeJSError($"Error exporting job history: {ex.Message}");
+        }
+    }
+
+    private string CrystalQuartzUrl => Configuration["Quartz:MonitorUrl"] ?? "https://localhost:7042/quartz";
+    private string QuartzAdminUrl => Configuration["Quartz:AdminUrl"] ?? "https://localhost:7042/quartz-admin.html";
+
+    // Data models for job monitoring
+    public class JobExecutionRecord
+    {
+        public string Id { get; set; } = string.Empty;
+        public string WorkflowId { get; set; } = string.Empty;
+        public string JobKey { get; set; } = string.Empty;
+        public DateTime StartTime { get; set; }
+        public DateTime? EndTime { get; set; }
+        public long Duration { get; set; }
+        public string Status { get; set; } = string.Empty;
+        public string? ErrorMessage { get; set; }
+        public string? Result { get; set; }
+    }
+
+    public class JobStatistics
+    {
+        public string WorkflowId { get; set; } = string.Empty;
+        public int TotalExecutions { get; set; }
+        public double SuccessRate { get; set; }
+        public double FailureRate { get; set; }
+        public double AverageExecutionTime { get; set; }
+        public long MinExecutionTime { get; set; }
+        public long MaxExecutionTime { get; set; }
+        public DateTime? LastExecutionTime { get; set; }
+        public string? LastExecutionStatus { get; set; }
+        public string HealthStatus { get; set; } = string.Empty;
+        public bool HasRecentActivity { get; set; }
+    }
+
+    public class PerformanceMetrics
+    {
+        public int TotalJobs { get; set; }
+        public int TotalExecutions { get; set; }
+        public double OverallSuccessRate { get; set; }
+        public int JobsWithRecentActivity { get; set; }
+        public DateTime LastUpdated { get; set; }
+    }
+
+    public class QuartzWorkflowMetrics
+    {
+        public string WorkflowId { get; set; } = string.Empty;
+        public string WorkflowName { get; set; } = string.Empty;
+        public int TotalExecutions { get; set; }
+        public int TotalSuccessfulExecutions { get; set; }
+        public int TotalFailedExecutions { get; set; }
+        public double SuccessRate { get; set; }
+        public string AverageExecutionTime { get; set; } = string.Empty;
+        public int ConsecutiveFailures { get; set; }
+        public DateTime? LastExecutionTime { get; set; }
+        public DateTime? LastSuccessTime { get; set; }
+        public DateTime? LastFailureTime { get; set; }
+        public string? LastErrorMessage { get; set; }
+    }
+}
+
+<script>
+    window.downloadFile = function (filename, content, contentType) {
+        const blob = new Blob([content], { type: contentType });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+    };
+</script>

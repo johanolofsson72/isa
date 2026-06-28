@@ -1,0 +1,6 @@
+@GetDropboxToken_HostAddress = http://localhost:5053
+
+GET {{GetDropboxToken_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

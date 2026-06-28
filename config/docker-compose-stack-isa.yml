@@ -1,0 +1,143 @@
+# ============================================================================
+# AccountingAgent stack — Docker Swarm (demo cluster)
+#
+# Placement: any spot worker (node.role == worker). Volumes back to NFS so the
+# DB files survive node loss.
+#
+# !!! IMPORTANT TRADE-OFF !!!
+# SQLite on NFS is unsafe with WAL journaling. We therefore force the NFS-safe
+# profile via Sqlite__UseWal=false: journal_mode=DELETE + synchronous=FULL.
+# This is slower per write but safe on shared storage. See
+# .claude/rules/sqlite.md for the rationale.
+#
+# stop_grace_period must be >= Spot:KestrelShutdownTimeoutSeconds (20)
+#   + Spot:DrainDelaySeconds (3) + DB-flush headroom (~5).
+# ============================================================================
+
+services:
+
+  agent:
+    image: __AGENT_IMAGE__
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - "node.role == worker"
+      update_config:
+        order: stop-first
+        failure_action: rollback
+      restart_policy:
+        condition: any
+        delay: 5s
+    stop_grace_period: 30s
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_URLS: "http://+:80"
+      ISA_TEMPFILES_PATH: /tempfiles
+      ISA_WORKFLOWS_PATH: /workflows
+      ISA_HISTORY_PATH: /app/history.json
+      ISA_CONFIG_PATH: /config
+      ISA_SYSTEM_PROMPT_PATH: /config/systemprompt.txt
+      ISA_FORTNOX_PATH: /config/fortnox-access-token.json
+      GOOGLE_APPLICATION_CREDENTIALS: /config/google-credentials.json
+      ConnectionStrings__DefaultConnection: "Data Source=/config/agent.db"
+      ConnectionStrings__MemoryConnection: "Data Source=/config/memory.db"
+      ConnectionStrings__FilesConnection: "Data Source=/config/files.db"
+      # NFS-safe SQLite: DELETE journal mode, synchronous=FULL. WAL on NFS corrupts the DB.
+      Sqlite__UseWal: "false"
+      LiteLLM__Endpoint: "https://llm.example.com/v1"
+      LiteLLM__ApiKey: "REDACTED"
+      LiteLLM__ChatModel: "chat"
+      LiteLLM__EmbedModel: "embed"
+      LiteLLM__EmbeddingDimensions: "768"
+      LiteLLM__TimeoutMinutes: "5"
+      LiteLLM__UserAgent: "accountingagent/1.0"
+      CloudflareAccess__ClientId: "YOUR_CLOUDFLARE_ACCESS_CLIENT_ID"
+      CloudflareAccess__ClientSecret: "REDACTED"
+      LLM__SystemPromptFile: "/config/systemprompt.txt"
+      Spot__ImdsPollIntervalSeconds: "10"
+      Spot__DrainDelaySeconds: "3"
+      Spot__KestrelShutdownTimeoutSeconds: "20"
+    volumes:
+      - type: bind
+        source: /mnt/nfs/isa/config
+        target: /config
+      - type: bind
+        source: /mnt/nfs/isa/tempfiles
+        target: /tempfiles
+      - type: bind
+        source: /mnt/nfs/isa/config/agent.db
+        target: /config/agent.db
+      - type: bind
+        source: /mnt/nfs/isa/config/memory.db
+        target: /config/memory.db
+      - type: bind
+        source: /mnt/nfs/isa/config/files.db
+        target: /config/files.db
+      - type: bind
+        source: /mnt/nfs/isa/config/systemprompt.txt
+        target: /config/systemprompt.txt
+        read_only: true
+      - type: bind
+        source: /mnt/nfs/isa/config/users.json
+        target: /config/users.json
+        read_only: true
+      - type: bind
+        source: /mnt/nfs/isa/config/plugins.json
+        target: /config/plugins.json
+        read_only: true
+      - type: bind
+        source: /mnt/nfs/isa/config/accountingagentdrive-c18d67539c7b.json
+        target: /config/google-credentials.json
+        read_only: true
+      - type: bind
+        source: /mnt/nfs/isa/workflows
+        target: /workflows
+      - type: bind
+        source: /mnt/nfs/isa/config/appsettings.agent.json
+        target: /app/appsettings.json
+        read_only: true
+      - type: bind
+        source: /mnt/nfs/isa/config/mcp-server-config.json
+        target: /config/mcp-server-config.json
+        read_only: true
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:80/health/db || exit 1"]
+      interval: 10s
+      timeout: 3s
+      start_period: 30s
+      retries: 3
+    networks:
+      - web
+
+  web:
+    image: __WEB_IMAGE__
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - "node.role == worker"
+      update_config:
+        order: stop-first
+      restart_policy:
+        condition: any
+        delay: 5s
+    stop_grace_period: 15s
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_URLS: "http://+:80"
+      ISA_FORTNOX_PATH: /config/fortnox-access-token.json
+    volumes:
+      - type: bind
+        source: /mnt/nfs/isa/config
+        target: /config
+      - type: bind
+        source: /mnt/nfs/isa/config/appsettings.web.json
+        target: /app/appsettings.json
+        read_only: true
+    networks:
+      - web
+
+networks:
+  web:
+    external: true

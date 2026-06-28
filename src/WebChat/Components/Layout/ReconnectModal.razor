@@ -1,0 +1,22 @@
+﻿<script type="module" src="@Assets["Components/Layout/ReconnectModal.razor.js"]"></script>
+
+<dialog id="components-reconnect-modal" data-nosnippet>
+    <div class="components-reconnect-container">
+        <div class="components-rejoining-animation" aria-hidden="true">
+            <div></div>
+            <div></div>
+        </div>
+        <p class="components-reconnect-first-attempt-visible">
+            Återansluter till servern...
+        </p>
+        <p class="components-reconnect-repeated-attempt-visible">
+            Återanslutning misslyckades... försöker igen om <span id="components-seconds-to-next-attempt"></span> sekunder.
+        </p>
+        <p class="components-reconnect-failed-visible">
+            Misslyckades med återanslutning.<br/>Vänligen försök igen eller ladda om sidan.
+        </p>
+        <button id="components-reconnect-button" class="components-reconnect-failed-visible">
+            Försök igen
+        </button>
+    </div>
+</dialog>

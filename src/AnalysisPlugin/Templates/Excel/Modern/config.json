@@ -1,0 +1,70 @@
+{
+  "name": "Modern Excel Template",
+  "description": "Contemporary modern style template for Excel reports with vibrant colors",
+  "type": "excel",
+  "style": "modern",
+  "templateFile": "template.xlsx",
+  "colors": {
+    "primary": "#2e86ab",
+    "secondary": "#a23b72",
+    "accent": "#f18f01",
+    "background": "#ffffff",
+    "text": "#2c3e50",
+    "headerBackground": "#ecf0f1",
+    "borderColor": "#bdc3c7"
+  },
+  "fonts": {
+    "heading": "Segoe UI",
+    "body": "Segoe UI",
+    "data": "Consolas",
+    "headingSize": 18,
+    "bodySize": 11,
+    "dataSize": 10
+  },
+  "layout": {
+    "margins": {
+      "top": 30,
+      "bottom": 30,
+      "left": 30,
+      "right": 30
+    },
+    "headerHeight": 90,
+    "footerHeight": 50,
+    "columnSpacing": 25,
+    "rowSpacing": 18
+  },
+  "components": [
+    {
+      "type": "header",
+      "position": {
+        "row": 1,
+        "column": 1,
+        "width": 12,
+        "height": 5
+      },
+      "style": {
+        "backgroundColor": "#2e86ab",
+        "textColor": "#ffffff",
+        "fontSize": 20,
+        "fontWeight": "bold",
+        "borderRadius": 5
+      }
+    },
+    {
+      "type": "table",
+      "position": {
+        "row": 7,
+        "column": 1,
+        "width": 10,
+        "height": 25
+      },
+      "style": {
+        "headerBackgroundColor": "#2e86ab",
+        "headerTextColor": "#ffffff",
+        "alternateRowColor": "#ecf0f1",
+        "borderColor": "#bdc3c7",
+        "borderRadius": 3
+      }
+    }
+  ]
+}

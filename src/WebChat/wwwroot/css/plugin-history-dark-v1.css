@@ -1,0 +1,7 @@
+/* Dark mode fixes for History & Conversation Details (v1) */
+.history-container, .conversation-detail, .conversation-timeline { color: var(--text-color); }
+.history-card { background: var(--card-bg); color: var(--text-color); border: 1px solid var(--border-color); }
+.date-header, .history-preview { color: var(--text-secondary-color); }
+.conversation-messages .message-content { background: var(--chat-agent-bg); color: var(--text-color); border-color: var(--border-color); }
+.timeline-header, .page-header { border-bottom: 1px solid var(--border-color); }
+

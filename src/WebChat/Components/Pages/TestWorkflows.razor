@@ -1,0 +1,91 @@
+@page "/test-workflows"
+@inject WebChat.Services.WorkflowService WorkflowService
+@inject ILogger<TestWorkflows> Logger
+
+<PageTitle>Testa arbetsflöden - Isa</PageTitle>
+
+<div class="container">
+    <h1>Arbetsflödestestning</h1>
+    
+    <div class="mb-3">
+        <button class="btn btn-primary" @onclick="TestWorkflowLoading">Testa arbetsflödesladdning</button>
+        <button class="btn btn-secondary ms-2" @onclick="TestSpecificWorkflow">Testa specifikt arbetsflöde</button>
+    </div>
+    
+    <div class="mb-3">
+        <label>Arbetsflödes-ID att testa:</label>
+        <input @bind="testWorkflowId" class="form-control" placeholder="Ange arbetsflödes-ID" />
+    </div>
+    
+    <div class="results">
+        <h3>Resultat:</h3>
+        <pre>@logOutput</pre>
+    </div>
+</div>
+
+@code {
+    private string logOutput = "";
+    private string testWorkflowId = "daily-morning-report-workflow";
+    
+    private async Task TestWorkflowLoading()
+    {
+        logOutput = "Testar arbetsflödesladdning...\n";
+        
+        try
+        {
+            var workflows = await WorkflowService.GetWorkflowsAsync();
+            logOutput += $"Hittade {workflows.Count} arbetsflöden:\n";
+            
+            foreach (var workflow in workflows)
+            {
+                logOutput += $"- ID: '{workflow.Id}', Name: '{workflow.Name}', Type: '{workflow.ExecutionType}'\n";
+            }
+        }
+        catch (Exception ex)
+        {
+            logOutput += $"Fel: {ex.Message}\n";
+        }
+        
+        StateHasChanged();
+    }
+    
+    private async Task TestSpecificWorkflow()
+    {
+        if (string.IsNullOrEmpty(testWorkflowId))
+        {
+            logOutput = "Please enter a workflow ID to test.\n";
+            StateHasChanged();
+            return;
+        }
+        
+        logOutput = $"Testing workflow with ID: '{testWorkflowId}'...\n";
+        
+        try
+        {
+            var workflow = await WorkflowService.GetWorkflowAsync(testWorkflowId);
+            
+            if (workflow != null)
+            {
+                logOutput += $"SUCCESS: Found workflow!\n";
+                logOutput += $"- ID: '{workflow.Id}'\n";
+                logOutput += $"- Name: '{workflow.Name}'\n";
+                logOutput += $"- Description: '{workflow.Description}'\n";
+                logOutput += $"- Enabled: {workflow.Enabled}\n";
+                logOutput += $"- Type: '{workflow.ExecutionType}'\n";
+                logOutput += $"- Schema: '{workflow.Schedule}'\n";
+                logOutput += $"- IsStandard: {workflow.IsStandard}\n";
+            }
+            else
+            {
+                logOutput += $"FAILURE: Workflow not found!\n";
+            }
+        }
+        catch (Exception ex)
+        {
+            logOutput += $"ERROR: {ex.Message}\n";
+            logOutput += $"Stack: {ex.StackTrace}\n";
+        }
+        
+        StateHasChanged();
+    }
+}

@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+    <PropertyGroup>
+        <TargetFramework>net9.0</TargetFramework>
+        <Nullable>enable</Nullable>
+        <ImplicitUsings>enable</ImplicitUsings>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <Content Include="Components\Pages\Workflows.razor.bak" />
+      <Content Remove="fortnox-access-token.json" />
+      <Content Remove="wwwroot\css\mobile-scroll-fix-v2.css" />
+      <Content Remove="wwwroot\js\mobile-scroll-fix.js" />
+      <Content Remove="wwwroot\js\user-identification.js" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Blazored.LocalStorage" />
+        <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" />
+        <PackageReference Include="Nito.AsyncEx" />
+        <PackageReference Include="Syncfusion.Blazor" />
+        <PackageReference Include="Syncfusion.Blazor.Themes" />
+        <PackageReference Include="YamlDotNet" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\FortnoxPlugin\FortnoxPlugin.csproj" />
+      <ProjectReference Include="..\ServiceDefaults\ServiceDefaults.csproj" />
+      <ProjectReference Include="..\Shared\Shared.csproj" />
+    </ItemGroup>
+
+</Project>

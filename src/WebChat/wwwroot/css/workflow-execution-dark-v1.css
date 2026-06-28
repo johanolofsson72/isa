@@ -1,0 +1,60 @@
+/* Dark mode overrides for /workflow-execution/{id} */
+html.dark-theme .execution-detail-container {
+  color: #e0e0e0;
+}
+
+html.dark-theme .page-header {
+  border-bottom-color: #2f2f2f;
+}
+
+html.dark-theme .header-info h1 { color: #e6e6e6; }
+html.dark-theme .execution-summary { color: #b0b0b0; }
+
+/* Status pills */
+html.dark-theme .execution-status { color: #d5d5d5; }
+html.dark-theme .execution-status.success { background: #1f3b2b; color: #9fd7af; }
+html.dark-theme .execution-status.failed { background: #3a1f23; color: #ff9ea8; }
+html.dark-theme .execution-status.running { background: #1f3440; color: #8fd3e6; }
+
+/* Cards/sections */
+html.dark-theme .detail-section {
+  background: #1e1e1e;
+  box-shadow: none;
+}
+html.dark-theme .detail-section h3 {
+  background: #262626;
+  border-bottom-color: #333;
+  color: #dddddd;
+}
+
+/* Grid labels */
+html.dark-theme .detail-item label { color: #b3b3b3; }
+
+/* Steps timeline */
+html.dark-theme .step-item:not(:last-child):before { background: #333; }
+html.dark-theme .step-indicator { background: #242424; border-color: #333; }
+html.dark-theme .step-item.success .step-indicator { background: #1f3b2b; border-color: #2a7a4a; }
+html.dark-theme .step-item.failed .step-indicator { background: #3a1f23; border-color: #a23b4a; }
+html.dark-theme .step-item.running .step-indicator { background: #1f3440; border-color: #2f99b3; }
+html.dark-theme .step-status-icon { background: #1e1e1e; }
+html.dark-theme .step-content { background: #222; }
+html.dark-theme .step-meta { color: #9a9a9a; }
+html.dark-theme .step-description { color: #b0b0b0; }
+
+/* Pre/code blocks */
+html.dark-theme .step-data, html.dark-theme .step-error {
+  background: #151515;
+  border-color: #333;
+  color: #ddd;
+}
+html.dark-theme .step-error { background: #2a1313; border-color: #5a1a1a; color: #ffb3b3; }
+
+/* Logs */
+html.dark-theme .logs-container { background: #161a1d; border-color: #2f2f2f; }
+html.dark-theme .log-entry { border-bottom-color: #2a2a2a; }
+html.dark-theme .log-time { color: #9a9a9a; }
+
+/* Loading/Error states */
+html.dark-theme .loading-state, html.dark-theme .error-state { color: #b0b0b0; }
+html.dark-theme .loading-icon, html.dark-theme .error-icon { filter: brightness(1.1); }
+

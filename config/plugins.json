@@ -1,0 +1,886 @@
+{
+  "plugins": [
+    {
+      "name": "SMS",
+      "description": "Send SMS messages using 46elks API",
+      "category": "Communication",
+      "version": "1.0.0",
+      "functions": [
+        {
+          "name": "SendSmsAsync",
+          "description": "Send an SMS message to a phone number",
+          "parameters": {
+            "to": {
+              "type": "string",
+              "required": false,
+              "description": "Recipient phone number in E.164 format (e.g. \u002B46701234567)"
+            },
+            "message": {
+              "type": "string",
+              "required": false,
+              "description": "The message text to send"
+            },
+            "from": {
+              "type": "string",
+              "required": false,
+              "description": "Optional sender ID"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "WhatsApp",
+      "description": "Messaging using WhatsApp Business API",
+      "category": "Communication",
+      "version": "1.0.0",
+      "functions": [
+        {
+          "name": "SendMessageAsync",
+          "description": "Send a WhatsApp message using Twilio with reliable delivery",
+          "parameters": {
+            "to": {
+              "type": "string",
+              "required": false,
+              "description": "Recipient phone number in E.164 format (e.g., \u002B46701234567)"
+            },
+            "message": {
+              "type": "string",
+              "required": false,
+              "description": "Message content to send"
+            }
+          }
+        },
+        {
+          "name": "GetConfigurationStatusAsync",
+          "description": "Get WhatsApp plugin configuration status for debugging",
+          "parameters": {}
+        }
+      ]
+    },
+    {
+      "name": "GoogleWorkspace",
+      "description": "Google Workspace integration for Gmail, Calendar, and Drive",
+      "category": "Productivity",
+      "version": "1.0.0",
+      "functions": [
+        {
+          "name": "ListFiles",
+          "description": "Listar filer i den gemensamma Google Drive-mappen \u0027Work\u0027.",
+          "parameters": {
+            "folderName": {
+              "type": "string",
+              "required": false,
+              "description": "Namn p\u00E5 mappen, t.ex. \u0027Work\u0027"
+            }
+          }
+        },
+        {
+          "name": "UploadFile",
+          "description": "Laddar upp en fil till den gemensamma Google Drive-mappen \u0027Work\u0027.",
+          "parameters": {
+            "fileName": {
+              "type": "string",
+              "required": false,
+              "description": "Filnamn"
+            },
+            "content": {
+              "type": "string",
+              "required": false,
+              "description": "Filinneh\u00E5ll som base64-str\u00E4ng"
+            },
+            "folderName": {
+              "type": "string",
+              "required": false,
+              "description": "Namn p\u00E5 mappen, t.ex. \u0027Work\u0027"
+            }
+          }
+        },
+        {
+          "name": "ReadFile",
+          "description": "L\u00E4ser inneh\u00E5llet i en fil fr\u00E5n den gemensamma Google Drive-mappen \u0027Work\u0027.",
+          "parameters": {
+            "fileName": {
+              "type": "string",
+              "required": false,
+              "description": "Namn p\u00E5 filen"
+            },
+            "folderName": {
+              "type": "string",
+              "required": false,
+              "description": "Namn p\u00E5 mappen, t.ex. \u0027Work\u0027"
+            }
+          }
+        },
+        {
+          "name": "CreateCalendarEvent",
+          "description": "Skapar en kalenderh\u00E4ndelse i den gemensamma kalendern.",
+          "parameters": {
+            "title": {
+              "type": "string",
+              "required": false,
+              "description": "Titel p\u00E5 h\u00E4ndelsen"
+            },
+            "startTime": {
+              "type": "string",
+              "required": false,
+              "description": "Starttid i ISO 8601-format, t.ex. \u00272024-06-01T10:00:00Z\u0027"
+            },
+            "endTime": {
+              "type": "string",
+              "required": false,
+              "description": "Sluttid i ISO 8601-format, t.ex. \u00272024-06-01T11:00:00Z\u0027"
+            },
+            "description": {
+              "type": "string",
+              "required": false,
+              "description": "Beskrivning av h\u00E4ndelsen"
+            }
+          }
+        },
+        {
+          "name": "ListCalendarEvents",
+          "description": "Listar alla kalenderh\u00E4ndelser i den gemensamma kalendern.",
+          "parameters": {
+            "maxResults": {
+              "type": "integer",
+              "required": false,
+              "description": "Antal h\u00E4ndelser att h\u00E4mta (standard: 10)",
+              "default": 10
+            }
+          }
+        },
+        {
+          "name": "SendChatMessage",
+          "description": "Skickar ett meddelande till en anv\u00E4ndare via Google Chat.",
+          "parameters": {
+            "recipientEmail": {
+              "type": "string",
+              "required": false,
+              "description": "E-postadress f\u00F6r mottagaren"
+            },
+            "message": {
+              "type": "string",
+              "required": false,
+              "description": "Meddelandets inneh\u00E5ll"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "DateTime",
+      "description": "Date and time operations, timezone conversions, and scheduling",
+      "category": "Utilities",
+      "version": "1.0.0",
+      "functions": [
+        {
+          "name": "GetCurrentTime",
+          "description": "H\u00E4mtar aktuell tid baserat p\u00E5 koordinater",
+          "parameters": {
+            "latitude": {
+              "type": "number",
+              "required": true,
+              "description": "Latitud (breddgrad)"
+            },
+            "longitude": {
+              "type": "number",
+              "required": true,
+              "description": "Longitud (l\u00E4ngdgrad)"
+            }
+          }
+        },
+        {
+          "name": "GetCurrentDate",
+          "description": "H\u00E4mtar aktuellt datum baserat p\u00E5 koordinater",
+          "parameters": {
+            "latitude": {
+              "type": "number",
+              "required": true,
+              "description": "Latitud (breddgrad)"
+            },
+            "longitude": {
+              "type": "number",
+              "required": true,
+              "description": "Longitud (l\u00E4ngdgrad)"
+            }
+          }
+        },
+        {
+          "name": "GetCurrent",
+          "description": "H\u00E4mtar b\u00E5de aktuell tid och datum baserat p\u00E5 koordinater",
+          "parameters": {
+            "latitude": {
+              "type": "number",
+              "required": true,
+              "description": "Latitud (breddgrad)"
+            },
+            "longitude": {
+              "type": "number",
+              "required": true,
+              "description": "Longitud (l\u00E4ngdgrad)"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Dropbox",
+      "description": "File storage and sharing operations using Dropbox API",
+      "category": "Storage",
+      "version": "1.0.0",
+      "functions": [
+        {
+          "name": "ListFiles",
+          "description": "Listar filer i en Dropbox-mapp",
+          "parameters": {
+            "path": {
+              "type": "string",
+              "required": false,
+              "description": "S\u00F6kv\u00E4g till mappen (t.ex. /Documents)",
+              "default": ""
+            }
+          }
+        },
+        {
+          "name": "UploadFile",
+          "description": "Laddar upp en fil till Dropbox",
+          "parameters": {
+            "fileName": {
+              "type": "string",
+              "required": false,
+              "description": "Namn p\u00E5 filen"
+            },
+            "content": {
+              "type": "string",
+              "required": false,
+              "description": "Filinneh\u00E5ll som base64-str\u00E4ng"
+            },
+            "path": {
+              "type": "string",
+              "required": false,
+              "description": "S\u00F6kv\u00E4g d\u00E4r filen ska sparas (t.ex. /Documents/)",
+              "default": "/"
+            }
+          }
+        },
+        {
+          "name": "DownloadFile",
+          "description": "Laddar ner en fil fr\u00E5n Dropbox",
+          "parameters": {
+            "filePath": {
+              "type": "string",
+              "required": false,
+              "description": "Fullst\u00E4ndig s\u00F6kv\u00E4g till filen (t.ex. /Documents/file.txt)"
+            }
+          }
+        },
+        {
+          "name": "CreateFolder",
+          "description": "Skapar en ny mapp i Dropbox",
+          "parameters": {
+            "folderPath": {
+              "type": "string",
+              "required": false,
+              "description": "Fullst\u00E4ndig s\u00F6kv\u00E4g f\u00F6r den nya mappen (t.ex. /Documents/NewFolder)"
+            }
+          }
+        },
+        {
+          "name": "ReadFile",
+          "description": "L\u00E4ser inneh\u00E5llet i en fil fr\u00E5n Dropbox",
+          "parameters": {
+            "filePath": {
+              "type": "string",
+              "required": false,
+              "description": "Fullst\u00E4ndig s\u00F6kv\u00E4g till filen (t.ex. /Documents/file.txt)"
+            }
+          }
+        },
+        {
+          "name": "DeleteFile",
+          "description": "Raderar en fil eller mapp fr\u00E5n Dropbox",
+          "parameters": {
+            "path": {
+              "type": "string",
+              "required": false,
+              "description": "Fullst\u00E4ndig s\u00F6kv\u00E4g till filen eller mappen"
+            }
+          }
+        },
+        {
+          "name": "MoveFile",
+          "description": "Flyttar en fil eller mapp till en ny plats i Dropbox",
+          "parameters": {
+            "fromPath": {
+              "type": "string",
+              "required": false,
+              "description": "Nuvarande s\u00F6kv\u00E4g till filen eller mappen"
+            },
+            "toPath": {
+              "type": "string",
+              "required": false,
+              "description": "Ny s\u00F6kv\u00E4g f\u00F6r filen eller mappen"
+            }
+          }
+        },
+        {
+          "name": "RenameFile",
+          "description": "Byter namn p\u00E5 en fil eller mapp i Dropbox",
+          "parameters": {
+            "currentPath": {
+              "type": "string",
+              "required": false,
+              "description": "Nuvarande s\u00F6kv\u00E4g till filen eller mappen"
+            },
+            "newName": {
+              "type": "string",
+              "required": false,
+              "description": "Nytt namn (utan s\u00F6kv\u00E4g)"
+            }
+          }
+        },
+        {
+          "name": "DiagnoseDropboxConnection",
+          "description": "K\u00F6r en komplett diagnostisk test av Dropbox-anslutningen f\u00F6r fels\u00F6kning",
+          "parameters": {}
+        }
+      ]
+    },
+    {
+      "name": "GoogleSearch",
+      "description": "Web search using Google Custom Search API",
+      "category": "Information",
+      "version": "1.0.0",
+      "functions": [
+        {
+          "name": "SearchPersonAsync",
+          "description": "S\u00F6ker efter information om en person p\u00E5 webben med hj\u00E4lp av Google Custom Search API.",
+          "parameters": {
+            "name": {
+              "type": "string",
+              "required": false,
+              "description": "Personens namn"
+            },
+            "location": {
+              "type": "string",
+              "required": false,
+              "description": "Personens plats/location"
+            },
+            "company": {
+              "type": "string",
+              "required": false,
+              "description": "Personens f\u00F6retag/company"
+            }
+          }
+        },
+        {
+          "name": "SearchPersonWithAllDataAsync",
+          "description": "S\u00F6ker efter information om en person med all tillg\u00E4nglig data och testar olika kombinationer f\u00F6r att hitta mer information.",
+          "parameters": {
+            "name": {
+              "type": "string",
+              "required": false,
+              "description": "Personens namn"
+            },
+            "personData": {
+              "type": "string",
+              "required": false,
+              "description": "All tillg\u00E4nglig data om personen (adress, f\u00F6retag, telefon, e-post, etc.)"
+            }
+          }
+        },
+        {
+          "name": "SearchWebAsync",
+          "description": "S\u00F6ker efter allm\u00E4n information p\u00E5 webben med hj\u00E4lp av Google Custom Search API.",
+          "parameters": {
+            "query": {
+              "type": "string",
+              "required": false,
+              "description": "S\u00F6ktermen"
+            },
+            "maxResults": {
+              "type": "integer",
+              "required": false,
+              "description": "Antal resultat att returnera (1-10)",
+              "default": 5
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Slack",
+      "description": "Team communication and messaging using Slack API",
+      "category": "Communication",
+      "version": "1.0.0",
+      "functions": [
+        {
+          "name": "SendMessage",
+          "description": "Skickar ett meddelande till en Slack-kanal",
+          "parameters": {
+            "channel": {
+              "type": "string",
+              "required": false,
+              "description": "Kanalen att skicka till (t.ex. #general)"
+            },
+            "message": {
+              "type": "string",
+              "required": false,
+              "description": "Meddelandet att skicka"
+            }
+          }
+        },
+        {
+          "name": "SendDirectMessage",
+          "description": "Skickar ett direktmeddelande till en Slack-anv\u00E4ndare",
+          "parameters": {
+            "user": {
+              "type": "string",
+              "required": false,
+              "description": "Anv\u00E4ndarnamn (t.ex. @demo.user eller demo.user) eller anv\u00E4ndar-ID (t.ex. U000000000)"
+            },
+            "message": {
+              "type": "string",
+              "required": false,
+              "description": "Meddelandet att skicka"
+            }
+          }
+        },
+        {
+          "name": "SendWebhookMessage",
+          "description": "Skickar ett meddelande via Slack webhook",
+          "parameters": {
+            "message": {
+              "type": "string",
+              "required": false,
+              "description": "Meddelandet att skicka"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Geocoding",
+      "description": "Location and geocoding services using OpenCage API",
+      "category": "Information",
+      "version": "1.0.0",
+      "functions": [
+        {
+          "name": "GeocodeAddress",
+          "description": "Konverterar en adress till koordinater (geokodning)",
+          "parameters": {
+            "address": {
+              "type": "string",
+              "required": false,
+              "description": "Adressen att geokoda (t.ex. \u0027Stockholm, Sverige\u0027)"
+            }
+          }
+        },
+        {
+          "name": "ReverseGeocode",
+          "description": "Konverterar koordinater till adress (omv\u00E4nd geokodning)",
+          "parameters": {
+            "latitude": {
+              "type": "number",
+              "required": true,
+              "description": "Latitud (t.ex. 59.3293)"
+            },
+            "longitude": {
+              "type": "number",
+              "required": true,
+              "description": "Longitud (t.ex. 18.0686)"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "MicrosoftOffice",
+      "description": "Microsoft Office integration for documents and productivity",
+      "category": "Productivity",
+      "version": "1.0.0",
+      "functions": [
+        {
+          "name": "ListFiles",
+          "description": "Listar filer i valfri OneDrive-mapp f\u00F6r agent@yourtenant.onmicrosoft.com",
+          "parameters": {
+            "folderName": {
+              "type": "string",
+              "required": false,
+              "description": "Namn p\u00E5 mappen, t.ex. \u0027Work\u0027",
+              "default": "Work"
+            }
+          }
+        },
+        {
+          "name": "UploadFile",
+          "description": "Laddar upp en fil till valfri OneDrive-mapp f\u00F6r agent@yourtenant.onmicrosoft.com",
+          "parameters": {
+            "fileName": {
+              "type": "string",
+              "required": false,
+              "description": "Filnamn"
+            },
+            "content": {
+              "type": "string",
+              "required": false,
+              "description": "Filinneh\u00E5ll som base64-str\u00E4ng"
+            },
+            "folderName": {
+              "type": "string",
+              "required": false,
+              "description": "Namn p\u00E5 mappen, t.ex. \u0027Work\u0027",
+              "default": "Work"
+            }
+          }
+        },
+        {
+          "name": "ReadFile",
+          "description": "L\u00E4ser inneh\u00E5llet i en fil fr\u00E5n valfri OneDrive-mapp f\u00F6r agent@yourtenant.onmicrosoft.com",
+          "parameters": {
+            "fileName": {
+              "type": "string",
+              "required": false,
+              "description": "Namn p\u00E5 filen"
+            },
+            "folderName": {
+              "type": "string",
+              "required": false,
+              "description": "Namn p\u00E5 mappen, t.ex. \u0027Work\u0027",
+              "default": "Work"
+            }
+          }
+        },
+        {
+          "name": "DeleteFileOrFolder",
+          "description": "Raderar en fil fr\u00E5n valfri OneDrive-mapp f\u00F6r agent@yourtenant.onmicrosoft.com",
+          "parameters": {
+            "fileName": {
+              "type": "string",
+              "required": false,
+              "description": "Namn p\u00E5 filen"
+            },
+            "folderName": {
+              "type": "string",
+              "required": false,
+              "description": "Namn p\u00E5 mappen, t.ex. \u0027Work\u0027",
+              "default": "Work"
+            }
+          }
+        },
+        {
+          "name": "CreateCalendarEvent",
+          "description": "Skapar en kalenderh\u00E4ndelse f\u00F6r agent@yourtenant.onmicrosoft.com",
+          "parameters": {
+            "title": {
+              "type": "string",
+              "required": false,
+              "description": "Titel p\u00E5 h\u00E4ndelsen"
+            },
+            "startTime": {
+              "type": "string",
+              "required": false,
+              "description": "Starttid i ISO 8601-format, t.ex. \u00272024-06-01T10:00:00Z\u0027"
+            },
+            "endTime": {
+              "type": "string",
+              "required": false,
+              "description": "Sluttid i ISO 8601-format, t.ex. \u00272024-06-01T11:00:00Z\u0027"
+            },
+            "description": {
+              "type": "string",
+              "required": false,
+              "description": "Beskrivning av h\u00E4ndelsen",
+              "default": ""
+            }
+          }
+        },
+        {
+          "name": "ListCalendarEvents",
+          "description": "Listar alla kalenderh\u00E4ndelser f\u00F6r agent@yourtenant.onmicrosoft.com",
+          "parameters": {
+            "maxResults": {
+              "type": "integer",
+              "required": false,
+              "description": "Antal h\u00E4ndelser att h\u00E4mta (standard: 10)",
+              "default": 10
+            }
+          }
+        },
+        {
+          "name": "GetCalendarEventDetails",
+          "description": "H\u00E4mtar detaljerad information om en specifik kalenderh\u00E4ndelse",
+          "parameters": {
+            "eventId": {
+              "type": "string",
+              "required": false,
+              "description": "ID f\u00F6r h\u00E4ndelsen"
+            }
+          }
+        },
+        {
+          "name": "UpdateCalendarEvent",
+          "description": "Uppdaterar en befintlig kalenderh\u00E4ndelse",
+          "parameters": {
+            "eventId": {
+              "type": "string",
+              "required": false,
+              "description": "ID f\u00F6r h\u00E4ndelsen"
+            },
+            "newTitle": {
+              "type": "string",
+              "required": false,
+              "description": "Ny titel (l\u00E4mna tom f\u00F6r att beh\u00E5lla nuvarande)"
+            },
+            "newStartTime": {
+              "type": "string",
+              "required": false,
+              "description": "Ny starttid i ISO 8601-format"
+            },
+            "newEndTime": {
+              "type": "string",
+              "required": false,
+              "description": "Ny sluttid i ISO 8601-format"
+            },
+            "newDescription": {
+              "type": "string",
+              "required": false,
+              "description": "Ny beskrivning"
+            }
+          }
+        },
+        {
+          "name": "DeleteCalendarEvent",
+          "description": "Raderar en kalenderh\u00E4ndelse",
+          "parameters": {
+            "eventId": {
+              "type": "string",
+              "required": false,
+              "description": "ID f\u00F6r h\u00E4ndelsen"
+            }
+          }
+        },
+        {
+          "name": "SendTeamsMessage",
+          "description": "Skickar ett meddelande via Teams till en specifik anv\u00E4ndare",
+          "parameters": {
+            "recipientEmail": {
+              "type": "string",
+              "required": false,
+              "description": "E-postadress f\u00F6r mottagaren"
+            },
+            "message": {
+              "type": "string",
+              "required": false,
+              "description": "Meddelandets inneh\u00E5ll"
+            }
+          }
+        },
+        {
+          "name": "GetRecentTeamsMessages",
+          "description": "H\u00E4mtar de senaste meddelandena fr\u00E5n en Teams-chat",
+          "parameters": {
+            "participantEmail": {
+              "type": "string",
+              "required": false,
+              "description": "E-postadress f\u00F6r chat-deltagaren"
+            },
+            "maxResults": {
+              "type": "integer",
+              "required": false,
+              "description": "Antal meddelanden att h\u00E4mta (standard: 10)",
+              "default": 10
+            }
+          }
+        },
+        {
+          "name": "CreateTeamsChannelAndMessage",
+          "description": "Skapar en Teams-kanal och skickar ett meddelande",
+          "parameters": {
+            "channelName": {
+              "type": "string",
+              "required": false,
+              "description": "Namn p\u00E5 kanalen"
+            },
+            "message": {
+              "type": "string",
+              "required": false,
+              "description": "Meddelandets inneh\u00E5ll"
+            }
+          }
+        },
+        {
+          "name": "ListTeams",
+          "description": "Listar alla Teams som anv\u00E4ndaren \u00E4r medlem i",
+          "parameters": {}
+        },
+        {
+          "name": "SendMessageToChannel",
+          "description": "Skickar ett meddelande till en specifik Teams-kanal",
+          "parameters": {
+            "teamId": {
+              "type": "string",
+              "required": false,
+              "description": "Team ID"
+            },
+            "channelIdOrName": {
+              "type": "string",
+              "required": false,
+              "description": "Kanal ID eller namn"
+            },
+            "message": {
+              "type": "string",
+              "required": false,
+              "description": "Meddelandets inneh\u00E5ll"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Mail",
+      "description": "Send and read emails using Mailjet API",
+      "category": "Communication",
+      "version": "1.0.0",
+      "functions": [
+        {
+          "name": "SendEmailAsync",
+          "description": "Send an email using Mailjet with professional delivery assurance",
+          "parameters": {
+            "to": {
+              "type": "string",
+              "required": false,
+              "description": "Recipient email address"
+            },
+            "subject": {
+              "type": "string",
+              "required": false,
+              "description": "Email subject"
+            },
+            "body": {
+              "type": "string",
+              "required": false,
+              "description": "Email body content (can include HTML)"
+            },
+            "isHtml": {
+              "type": "boolean",
+              "required": false,
+              "description": "Whether the body contains HTML markup",
+              "default": true
+            }
+          }
+        },
+        {
+          "name": "ReadUnreadEmailsAsync",
+          "description": "Read unread emails from the specified mail account",
+          "parameters": {
+            "emailAddress": {
+              "type": "string",
+              "required": false,
+              "description": "Email address to read from"
+            },
+            "username": {
+              "type": "string",
+              "required": false,
+              "description": "Username for authentication"
+            },
+            "password": {
+              "type": "string",
+              "required": false,
+              "description": "Password for authentication"
+            },
+            "incomingProtocol": {
+              "type": "string",
+              "required": false,
+              "description": "Protocol to use (IMAP or POP3)",
+              "default": "IMAP"
+            },
+            "incomingServer": {
+              "type": "string",
+              "required": false,
+              "description": "Server address for incoming mail",
+              "default": "imap.gmail.com"
+            },
+            "incomingPort": {
+              "type": "integer",
+              "required": false,
+              "description": "Port number for incoming mail",
+              "default": 993
+            },
+            "useSSL": {
+              "type": "boolean",
+              "required": false,
+              "description": "Whether to use SSL for connection",
+              "default": true
+            },
+            "maxMessages": {
+              "type": "integer",
+              "required": false,
+              "description": "Maximum number of messages to fetch",
+              "default": 10
+            },
+            "fetchAttachments": {
+              "type": "boolean",
+              "required": false,
+              "description": "Whether to fetch attachments",
+              "default": true
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Weather",
+      "description": "Weather information and forecasts using OpenMeteo API",
+      "category": "Information",
+      "version": "1.0.0",
+      "functions": [
+        {
+          "name": "GetCurrentWeather",
+          "description": "H\u00E4mtar aktuellt v\u00E4der f\u00F6r en plats",
+          "parameters": {
+            "latitude": {
+              "type": "number",
+              "required": true,
+              "description": "Latitud (t.ex. 59.3293)"
+            },
+            "longitude": {
+              "type": "number",
+              "required": true,
+              "description": "Longitud (t.ex. 18.0686)"
+            }
+          }
+        },
+        {
+          "name": "GetWeatherForecast",
+          "description": "H\u00E4mtar v\u00E4derprognos f\u00F6r en plats",
+          "parameters": {
+            "latitude": {
+              "type": "number",
+              "required": true,
+              "description": "Latitud (t.ex. 59.3293)"
+            },
+            "longitude": {
+              "type": "number",
+              "required": true,
+              "description": "Longitud (t.ex. 18.0686)"
+            },
+            "days": {
+              "type": "integer",
+              "required": false,
+              "description": "Antal dagar fram\u00E5t (1-7)",
+              "default": 3
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "metadata": {
+    "generatedAt": "2025-08-17T16:30:29.810968Z",
+    "version": "1.0",
+    "totalPlugins": 11,
+    "totalFunctions": 47
+  }
+}

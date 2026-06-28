@@ -1,0 +1,68 @@
+{
+  "name": "Corporate Excel Template",
+  "description": "Professional corporate style template for Excel reports with blue and green color scheme",
+  "type": "excel",
+  "style": "corporate",
+  "templateFile": "template.xlsx",
+  "colors": {
+    "primary": "#1f4e79",
+    "secondary": "#70ad47",
+    "accent": "#ffc000",
+    "background": "#ffffff",
+    "text": "#333333",
+    "headerBackground": "#f2f2f2",
+    "borderColor": "#d0d0d0"
+  },
+  "fonts": {
+    "heading": "Calibri",
+    "body": "Calibri",
+    "data": "Consolas",
+    "headingSize": 16,
+    "bodySize": 11,
+    "dataSize": 10
+  },
+  "layout": {
+    "margins": {
+      "top": 25,
+      "bottom": 25,
+      "left": 25,
+      "right": 25
+    },
+    "headerHeight": 80,
+    "footerHeight": 40,
+    "columnSpacing": 20,
+    "rowSpacing": 15
+  },
+  "components": [
+    {
+      "type": "header",
+      "position": {
+        "row": 1,
+        "column": 1,
+        "width": 10,
+        "height": 4
+      },
+      "style": {
+        "backgroundColor": "#1f4e79",
+        "textColor": "#ffffff",
+        "fontSize": 18,
+        "fontWeight": "bold"
+      }
+    },
+    {
+      "type": "table",
+      "position": {
+        "row": 6,
+        "column": 1,
+        "width": 8,
+        "height": 20
+      },
+      "style": {
+        "headerBackgroundColor": "#1f4e79",
+        "headerTextColor": "#ffffff",
+        "alternateRowColor": "#f2f2f2",
+        "borderColor": "#d0d0d0"
+      }
+    }
+  ]
+}

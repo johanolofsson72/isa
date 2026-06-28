@@ -1,0 +1,303 @@
+@page "/workflows"
+@using WebChat.Services
+@using Microsoft.AspNetCore.Components.Web.Infrastructure
+@implements IDisposable
+@inject IConfiguration Configuration
+
+@inject NavigationManager NavigationManager
+@inject IJSRuntime JS
+@inject WebChat.Services.WorkflowService WorkflowService
+
+
+<link href="css/isa-workflows-v12.css" rel="stylesheet" />
+
+<PageTitle>Arbetsflöden - Isa</PageTitle>
+
+<div class="workflows-container">
+    <div class="page-header">
+        <h1>Arbetsflöden</h1>
+        <div class="actions" style="display:flex; gap:.5rem; align-items:center;">
+            <button class="btn btn-primary" @onclick="CreateNewWorkflow">
+                <span class="bi bi-plus"></span> Nytt arbetsflöde
+            </button>
+        </div>
+    </div>
+
+    <div class="workflows-list">
+        @if (workflows.Count == 0)
+        {
+            <div class="empty-state">
+                <span class="bi bi-diagram-3 empty-icon"></span>
+                <h3>Inga arbetsflöden ännu</h3>
+                <p>Skapa ditt första arbetsflöde för att börja automatisera uppgifter</p>
+                <button class="btn btn-primary" @onclick="CreateNewWorkflow">Skapa arbetsflöde</button>
+            </div>
+        }
+        else
+        {
+            @foreach (var workflow in workflows)
+            {
+                <div class="swipeable-item @(currentSwipedItem == workflow.Id ? "swiped" : "")" @key="workflow.Id"
+                     @ontouchstart="@(e => HandleTouchStart(e, workflow.Id))"
+                     @ontouchmove="@(e => HandleTouchMove(e, workflow.Id))"
+                     @ontouchend="@(e => HandleTouchEnd(e, workflow.Id))">
+                    <div class="swipeable-content">
+                        <div class="workflow-card" @onclick="() => EditWorkflow(workflow.Id)">
+                            <div class="workflow-header">
+                                <h3 class="workflow-name">@workflow.Name</h3>
+                                <span class="workflow-status @(workflow.Enabled ? "enabled" : "disabled")">
+                                    @(workflow.Enabled ? "Aktiverad" : "Inaktiverad")
+                                </span>
+                            </div>
+                            <p class="workflow-description">@workflow.Description</p>
+                            <div class="workflow-footer">
+                                <span class="workflow-type">
+                                    <span class="@(workflow.ExecutionType == "manual" ? "bi bi-person" : "bi bi-clock")"></span>
+                                    @(workflow.ExecutionType == "manual" ? "manuell" : workflow.ExecutionType == "scheduled" ? "schemalagd" : workflow.ExecutionType)
+                                </span>
+                                <div class="workflow-meta">
+                                    @if (!string.IsNullOrWhiteSpace(workflow.Schedule))
+                                    {
+                                        <span title="Cron"><i class="bi bi-calendar-event me-1"></i>@workflow.Schedule</span>
+                                    }
+                                    @if (!string.IsNullOrWhiteSpace(workflow.Schedule))
+                                    {
+                                        var next = WorkflowService.GetNextExecutionTime(workflow.Schedule);
+                                        if (next.HasValue)
+                                        {
+                                            <span title="Nästa körning"><i class="bi bi-clock-history me-1"></i>@next.Value.ToString("yyyy-MM-dd HH:mm")</span>
+                                        }
+                                    }
+                                </div>
+                                <div class="workflow-actions">
+                                    <button class="btn btn-sm btn-outline-secondary" @onclick:stopPropagation="true" @onclick="() => DuplicateWorkflow(workflow.Id)" title="Duplicera">
+                                        <span class="bi bi-files"></span>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-primary" @onclick:stopPropagation="true" @onclick="() => RunWorkflow(workflow.Id)" disabled="@IsRunning(workflow.Id)">
+                                        @if (IsRunning(workflow.Id))
+                                        {
+                                            <span class="bi bi-gear-fill spin"></span>
+                                            <span>Kör...</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="bi bi-play-fill"></span>
+                                            <span>Kör</span>
+                                        }
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-danger" @onclick:stopPropagation="true" title="Radera" @onclick="() => ConfirmDelete(workflow.Id)">
+                                        <span class="bi bi-trash"></span>
+                                    </button>
+                                </div>
+
+                                @if (!string.IsNullOrEmpty(GetWorkflowStatus(workflow.Id)) && !IsRunning(workflow.Id))
+                                {
+                                    <span class="workflow-run-status @GetStatusClass(workflow.Id)">
+                                        @GetWorkflowStatus(workflow.Id)
+                                    </span>
+                                }
+
+                                @if (IsRunning(workflow.Id))
+                                {
+                                    <div class="workflow-progress">
+                                        <div class="progress-bar"></div>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                    @if (!workflow.IsStandard)
+                    {
+                        <div class="swipeable-action delete" @onclick="() => ConfirmDelete(workflow.Id)">
+                            <span class="bi bi-trash"></span>
+                            <span>Radera</span>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="swipeable-action standard">
+                            <span class="bi bi-shield-check"></span>
+                            <span>Standard</span>
+                        </div>
+                    }
+                </div>
+            }
+        }
+    </div>
+</div>
+
+@code {
+    private List<WebChat.Services.WorkflowModel> workflows = new();
+    private Dictionary<string, string> workflowStatuses = new();
+    private string? currentSwipedItem = null;
+    private double touchStartX = 0;
+    private bool isSwiping = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Subscribe to workflow status changes
+        WorkflowService.OnWorkflowStatusChanged += OnWorkflowStatusChanged;
+
+        // Load workflows
+        await LoadWorkflowsAsync();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            // Ensure mobile scrolling works on this page
+            await JS.InvokeVoidAsync("ensureMobileScrolling");
+        }
+    }
+
+    private async Task LoadWorkflowsAsync()
+    {
+        workflows = await WorkflowService.GetWorkflowsAsync();
+        StateHasChanged();
+    }
+
+    private void OnWorkflowStatusChanged(string id, string status)
+    {
+        if (string.IsNullOrEmpty(status))
+        {
+            workflowStatuses.Remove(id);
+        }
+        else
+        {
+            workflowStatuses[id] = status;
+        }
+
+        // Trigger UI update
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void CreateNewWorkflow()
+    {
+        NavigationManager.NavigateTo("/workflows/create");
+    }
+
+    private void EditWorkflow(string id)
+    {
+        NavigationManager.NavigateTo($"/workflows/edit/{id}");
+    }
+
+    private async Task ConfirmDelete(string id)
+    {
+        var wf = workflows.FirstOrDefault(w => w.Id == id);
+        var confirmed = await JS.InvokeAsync<bool>("confirm", $"Radera arbetsflödet '{wf?.Name ?? id}'? Detta kan inte ångras.");
+        if (confirmed)
+        {
+            await DeleteWorkflow(id);
+        }
+    }
+
+    private async Task RunWorkflow(string id)
+    {
+        Console.WriteLine($"Running workflow: {id}");
+        await WorkflowService.RunWorkflowAsync(id);
+    }
+
+    private async Task DeleteWorkflow(string id)
+    {
+        var workflowToRemove = workflows.FirstOrDefault(w => w.Id == id);
+        Console.WriteLine($"Attempting to delete workflow: {id}");
+
+        // Call the service to delete the workflow
+        var success = await WorkflowService.DeleteWorkflowAsync(id);
+
+        Console.WriteLine($"Delete result for {id}: {success}");
+
+        if (success)
+        {
+            // Remove from local list if successful
+            if (workflowToRemove != null)
+            {
+                workflows.Remove(workflowToRemove);
+
+                // Show temporary success message (could use a toast notification here)
+                Console.WriteLine($"Successfully deleted workflow: {id}");
+            }
+        }
+        else
+        {
+            // Could show an error message here
+            Console.WriteLine($"Failed to delete workflow: {id}");
+        }
+
+        // Reset swiped state
+        currentSwipedItem = null;
+        StateHasChanged();
+    }
+
+    private async Task DuplicateWorkflow(string id)
+    {
+        // Anropa WorkflowService för att duplicera arbetsflödet
+        var result = await WorkflowService.DuplicateWorkflowAsync(id);
+
+        // Ladda om arbetsflödena för att visa den nya kopian
+        if (result)
+        {
+            await LoadWorkflowsAsync();
+        }
+    }
+
+    private bool IsRunning(string id)
+    {
+        return WorkflowService.IsWorkflowRunning(id);
+    }
+
+    private string GetWorkflowStatus(string id)
+    {
+        return WorkflowService.GetWorkflowRunningStatus(id);
+    }
+
+    private string GetStatusClass(string id)
+    {
+        var status = GetWorkflowStatus(id);
+        if (status.StartsWith("Completed"))
+            return "status-success";
+        if (status.StartsWith("Failed") || status.StartsWith("Error"))
+            return "status-error";
+        return "status-info";
+    }
+
+    // Touch event handlers for swipe-to-delete
+    private void HandleTouchStart(TouchEventArgs e, string id)
+    {
+        touchStartX = e.Touches[0].ClientX;
+        isSwiping = true;
+    }
+
+    private void HandleTouchMove(TouchEventArgs e, string id)
+    {
+        if (!isSwiping) return;
+
+        var currentX = e.Touches[0].ClientX;
+        var deltaX = currentX - touchStartX;
+
+        if (deltaX < -50) // Swipe left threshold
+        {
+            currentSwipedItem = id;
+            StateHasChanged();
+        }
+        else if (deltaX > 50) // Swipe right threshold
+        {
+            currentSwipedItem = null;
+            StateHasChanged();
+        }
+    }
+
+
+
+    private void HandleTouchEnd(TouchEventArgs e, string id)
+    {
+        isSwiping = false;
+    }
+
+    public void Dispose()
+    {
+        // Unsubscribe from events
+        WorkflowService.OnWorkflowStatusChanged -= OnWorkflowStatusChanged;
+    }
+}

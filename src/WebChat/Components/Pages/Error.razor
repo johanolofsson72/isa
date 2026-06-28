@@ -1,0 +1,36 @@
+﻿@page "/Error"
+@using System.Diagnostics
+
+<PageTitle>Fel</PageTitle>
+
+<h1 class="text-danger">Fel.</h1>
+<h2 class="text-danger">Ett fel inträffade när din begäran bearbetades.</h2>
+
+@if (ShowRequestId)
+{
+    <p>
+        <strong>Begäran-ID:</strong> <code>@RequestId</code>
+    </p>
+}
+
+<h3>Utvecklingsläge</h3>
+<p>
+    Att byta till <strong>Development</strong>-miljön kommer att visa mer detaljerad information om felet som inträffade.
+</p>
+<p>
+    <strong>Development-miljön bör inte vara aktiverad för distribuerade applikationer.</strong>
+    Det kan resultera i att känslig information från undantag visas för slutanvändare.
+    För lokal felsökning, aktivera <strong>Development</strong>-miljön genom att sätta miljövariabeln <strong>ASPNETCORE_ENVIRONMENT</strong> till <strong>Development</strong>
+    och starta om appen.
+</p>
+
+@code{
+    [CascadingParameter] private HttpContext? HttpContext { get; set; }
+
+    private string? RequestId { get; set; }
+    private bool ShowRequestId => !string.IsNullOrEmpty(RequestId);
+
+    protected override void OnInitialized() =>
+        RequestId = Activity.Current?.Id ?? HttpContext?.TraceIdentifier;
+
+}

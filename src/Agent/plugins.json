@@ -1,0 +1,2086 @@
+{
+  "plugins": [
+    {
+      "name": "SMS",
+      "description": "Send SMS messages using 46elks API",
+      "category": "Communication",
+      "version": "1.0.0",
+      "functions": [
+        {
+          "name": "SendSmsAsync",
+          "description": "Send an SMS message to a phone number",
+          "parameters": {
+            "to": {
+              "type": "string",
+              "required": false,
+              "description": "Recipient phone number in E.164 format (e.g. \u002B46701234567)"
+            },
+            "message": {
+              "type": "string",
+              "required": false,
+              "description": "The message text to send"
+            },
+            "from": {
+              "type": "string",
+              "required": false,
+              "description": "Optional sender ID"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "WhatsApp",
+      "description": "Messaging using WhatsApp Business API",
+      "category": "Communication",
+      "version": "1.0.0",
+      "functions": [
+        {
+          "name": "SendMessageAsync",
+          "description": "Send a WhatsApp message using Twilio with reliable delivery",
+          "parameters": {
+            "to": {
+              "type": "string",
+              "required": false,
+              "description": "Recipient phone number in E.164 format (e.g., \u002B46701234567)"
+            },
+            "message": {
+              "type": "string",
+              "required": false,
+              "description": "Message content to send"
+            }
+          }
+        },
+        {
+          "name": "GetConfigurationStatusAsync",
+          "description": "Get WhatsApp plugin configuration status for debugging",
+          "parameters": {}
+        }
+      ]
+    },
+    {
+      "name": "GoogleWorkspace",
+      "description": "Google Workspace integration for Gmail, Calendar, and Drive",
+      "category": "Productivity",
+      "version": "1.0.0",
+      "functions": [
+        {
+          "name": "ListFiles",
+          "description": "Listar filer i den gemensamma Google Drive-mappen \u0027Work\u0027.",
+          "parameters": {
+            "folderName": {
+              "type": "string",
+              "required": false,
+              "description": "Namn p\u00E5 mappen, t.ex. \u0027Work\u0027"
+            }
+          }
+        },
+        {
+          "name": "UploadFile",
+          "description": "Laddar upp en fil till den gemensamma Google Drive-mappen \u0027Work\u0027.",
+          "parameters": {
+            "fileName": {
+              "type": "string",
+              "required": false,
+              "description": "Filnamn"
+            },
+            "content": {
+              "type": "string",
+              "required": false,
+              "description": "Filinneh\u00E5ll som base64-str\u00E4ng"
+            },
+            "folderName": {
+              "type": "string",
+              "required": false,
+              "description": "Namn p\u00E5 mappen, t.ex. \u0027Work\u0027"
+            }
+          }
+        },
+        {
+          "name": "ReadFile",
+          "description": "L\u00E4ser inneh\u00E5llet i en fil fr\u00E5n den gemensamma Google Drive-mappen \u0027Work\u0027.",
+          "parameters": {
+            "fileName": {
+              "type": "string",
+              "required": false,
+              "description": "Namn p\u00E5 filen"
+            },
+            "folderName": {
+              "type": "string",
+              "required": false,
+              "description": "Namn p\u00E5 mappen, t.ex. \u0027Work\u0027"
+            }
+          }
+        },
+        {
+          "name": "DownloadFile",
+          "description": "Laddar ner en fil fr\u00E5n Google Drive och sparar den via TempFilesService f\u00F6r vidare bearbetning.",
+          "parameters": {
+            "fileName": {
+              "type": "string",
+              "required": false,
+              "description": "Namn p\u00E5 filen"
+            },
+            "folderName": {
+              "type": "string",
+              "required": false,
+              "description": "Namn p\u00E5 mappen, t.ex. \u0027Work\u0027"
+            }
+          }
+        },
+        {
+          "name": "CreateCalendarEvent",
+          "description": "Skapar en kalenderh\u00E4ndelse i den gemensamma kalendern.",
+          "parameters": {
+            "title": {
+              "type": "string",
+              "required": false,
+              "description": "Titel p\u00E5 h\u00E4ndelsen"
+            },
+            "startTime": {
+              "type": "string",
+              "required": false,
+              "description": "Starttid i ISO 8601-format, t.ex. \u00272024-06-01T10:00:00Z\u0027"
+            },
+            "endTime": {
+              "type": "string",
+              "required": false,
+              "description": "Sluttid i ISO 8601-format, t.ex. \u00272024-06-01T11:00:00Z\u0027"
+            },
+            "description": {
+              "type": "string",
+              "required": false,
+              "description": "Beskrivning av h\u00E4ndelsen"
+            }
+          }
+        },
+        {
+          "name": "ListCalendarEvents",
+          "description": "Listar alla kalenderh\u00E4ndelser i den gemensamma kalendern.",
+          "parameters": {
+            "maxResults": {
+              "type": "integer",
+              "required": false,
+              "description": "Antal h\u00E4ndelser att h\u00E4mta (standard: 10)",
+              "default": 10
+            }
+          }
+        },
+        {
+          "name": "SearchCalendarEvents",
+          "description": "S\u00F6ker efter specifika kalenderh\u00E4ndelser baserat p\u00E5 titel, datum eller tid.",
+          "parameters": {
+            "title": {
+              "type": "string",
+              "required": false,
+              "description": "Titel p\u00E5 h\u00E4ndelsen att s\u00F6ka efter"
+            },
+            "startDate": {
+              "type": "string",
+              "required": false,
+              "description": "Startdatum att s\u00F6ka fr\u00E5n (ISO 8601-format, t.ex. \u00272024-06-01T00:00:00Z\u0027)"
+            },
+            "endDate": {
+              "type": "string",
+              "required": false,
+              "description": "Slutdatum att s\u00F6ka till (ISO 8601-format, t.ex. \u00272024-06-01T23:59:59Z\u0027)"
+            },
+            "maxResults": {
+              "type": "integer",
+              "required": false,
+              "description": "Antal h\u00E4ndelser att h\u00E4mta (standard: 50)",
+              "default": 50
+            }
+          }
+        },
+        {
+          "name": "SendChatMessage",
+          "description": "Skickar ett meddelande till en anv\u00E4ndare via Google Chat.",
+          "parameters": {
+            "recipientEmail": {
+              "type": "string",
+              "required": false,
+              "description": "E-postadress f\u00F6r mottagaren"
+            },
+            "message": {
+              "type": "string",
+              "required": false,
+              "description": "Meddelandets inneh\u00E5ll"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "CompanyCheckup",
+      "description": "Company information lookup using OpenCorporates and VIES",
+      "category": "Business",
+      "version": "1.0.0",
+      "functions": [
+        {
+          "name": "LookupCompanyAsync",
+          "description": "Sl\u00E5r upp ett f\u00F6retag och f\u00F6rbereder data f\u00F6r Fortnox. Efter att ha anropat denna funktion, anv\u00E4nd automatiskt FortnoxPlugin.CreateCustomerAsync med \u0027Drafts.FortnoxSupplier\u0027-objektet fr\u00E5n resultatet.",
+          "parameters": {
+            "companyIdentifier": {
+              "type": "string",
+              "required": false,
+              "description": "F\u00F6retagsnamn, organisationsnummer eller VAT-nummer"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "DateTime",
+      "description": "Date and time operations, timezone conversions, and scheduling",
+      "category": "Utilities",
+      "version": "1.0.0",
+      "functions": [
+        {
+          "name": "GetCurrentTime",
+          "description": "H\u00E4mtar aktuell tid baserat p\u00E5 koordinater",
+          "parameters": {
+            "latitude": {
+              "type": "number",
+              "required": true,
+              "description": "Latitud (breddgrad)"
+            },
+            "longitude": {
+              "type": "number",
+              "required": true,
+              "description": "Longitud (l\u00E4ngdgrad)"
+            }
+          }
+        },
+        {
+          "name": "GetCurrentDate",
+          "description": "H\u00E4mtar aktuellt datum baserat p\u00E5 koordinater",
+          "parameters": {
+            "latitude": {
+              "type": "number",
+              "required": true,
+              "description": "Latitud (breddgrad)"
+            },
+            "longitude": {
+              "type": "number",
+              "required": true,
+              "description": "Longitud (l\u00E4ngdgrad)"
+            }
+          }
+        },
+        {
+          "name": "GetCurrent",
+          "description": "H\u00E4mtar b\u00E5de aktuell tid och datum baserat p\u00E5 koordinater",
+          "parameters": {
+            "latitude": {
+              "type": "number",
+              "required": true,
+              "description": "Latitud (breddgrad)"
+            },
+            "longitude": {
+              "type": "number",
+              "required": true,
+              "description": "Longitud (l\u00E4ngdgrad)"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "AnalysisPlugin",
+      "description": "AI-driven financial analysis and reporting for Swedish accounting firms with BAS compliance, ML forecasting, and automated report generation",
+      "category": "Financial",
+      "version": "1.0.0",
+      "functions": [
+        {
+          "name": "CreateReportJobAsync",
+          "description": "AVANCERAD FUNKTION: Skapar en Excel-rapport fr\u00E5n SIE4-bokf\u00F6ringsdata. Anv\u00E4nd ENDAST denna funktion om anv\u00E4ndaren specifikt ber om manuell rapportskapande eller om CreateCompleteReportAsync inte fungerar. F\u00F6r normala rapportf\u00F6rfr\u00E5gningar, anv\u00E4nd CreateCompleteReportAsync ist\u00E4llet.",
+          "parameters": {
+            "sie4Data": {
+              "type": "string",
+              "required": false,
+              "description": "SIE4-bokf\u00F6ringsdata som inneh\u00E5ller transaktioner, konton och ekonomisk information"
+            },
+            "language": {
+              "type": "string",
+              "required": false,
+              "description": "Rapportspr\u00E5k: \u0027sv\u0027 f\u00F6r svenska, \u0027en\u0027 f\u00F6r engelska",
+              "default": "sv"
+            }
+          }
+        },
+        {
+          "name": "CreateReportJobFromFileAsync",
+          "description": "STEP 2: Creates Excel report job from SIE file. Use immediately after GetSIEAsync. Creates report structure only - add components with AddChartAsync, AddPivotTableAsync etc, then call FinishReportAsync.",
+          "parameters": {
+            "sieFileId": {
+              "type": "string",
+              "required": false,
+              "description": "File ID fr\u00E5n TempFilesService som inneh\u00E5ller SIE4-bokf\u00F6ringsdata f\u00F6r ett specifikt \u00E5r"
+            },
+            "language": {
+              "type": "string",
+              "required": false,
+              "description": "Rapportspr\u00E5k: \u0027sv\u0027 f\u00F6r svenska, \u0027en\u0027 f\u00F6r engelska",
+              "default": "sv"
+            }
+          }
+        },
+        {
+          "name": "CreateReportJobFromMultipleFilesAsync",
+          "description": "Skapar en professionell Excel-rapport fr\u00E5n flera \u00E5rs bokf\u00F6ringsdata. Anv\u00E4nd denna funktion n\u00E4r anv\u00E4ndaren vill j\u00E4mf\u00F6ra utgifter, int\u00E4kter eller resultat \u00F6ver flera \u00E5r, eller skapa trendanalyser och fler\u00E5rsrapporter i Excel-format. Kombinerar data fr\u00E5n flera SIE-filer och skapar en Excel-fil (.xlsx) med flera kalkylblad, grafer och j\u00E4mf\u00F6relser.",
+          "parameters": {
+            "sieFileIds": {
+              "type": "string",
+              "required": false,
+              "description": "Komma-separerade File IDs fr\u00E5n TempFilesService som inneh\u00E5ller SIE4-data f\u00F6r olika \u00E5r. Exempel: \u0027id1,id2,id3\u0027 f\u00F6r att kombinera flera \u00E5rs data"
+            },
+            "language": {
+              "type": "string",
+              "required": false,
+              "description": "Rapportspr\u00E5k: \u0027sv\u0027 f\u00F6r svenska, \u0027en\u0027 f\u00F6r engelska",
+              "default": "sv"
+            }
+          }
+        },
+        {
+          "name": "CreateFinancialReportAsync",
+          "description": "\uD83D\uDEA8 CRITICAL - PLANNING FUNCTION ONLY: This function ONLY provides step-by-step instructions for creating reports - it does NOT create any Excel content! You MUST follow the returned instructions exactly and call the other KernelFunctions in the specified order. This function analyzes the user\u0027s request and returns mandatory steps:\n\n\uD83D\uDCCA EXPENSE REPORTS (when user mentions \u0027utgifter\u0027, \u0027expenses\u0027, \u0027kostnader\u0027): Use reportType=\u0027expenses\u0027\n\uD83D\uDCC8 PROJECT REPORTS (when user mentions \u0027projekt\u0027, \u0027project\u0027): Use reportType=\u0027projects\u0027\n\uD83D\uDCB0 REVENUE REPORTS (when user mentions \u0027int\u00E4kter\u0027, \u0027oms\u00E4ttning\u0027, \u0027revenue\u0027): Use reportType=\u0027revenue\u0027\n\uD83D\uDCCB PROFIT/LOSS REPORTS (when user mentions \u0027resultat\u0027, \u0027profit\u0027, \u0027bruttovinst\u0027): Use reportType=\u0027profit_loss\u0027\n\uD83E\uDDFE VAT REPORTS (when user mentions \u0027moms\u0027, \u0027momsrapport\u0027, \u0027vat\u0027): Use reportType=\u0027vat\u0027\n\u2696\uFE0F BALANCE SHEET REPORTS (when user mentions \u0027balans\u0027, \u0027balansrapport\u0027, \u0027balance\u0027): Use reportType=\u0027balance\u0027\n\uD83D\uDCC5 PERIOD REPORTS (when user mentions specific year like \u00272023\u0027, \u00272024\u0027, \u00272022\u0027): Use the exact year\n\uD83D\uDD04 QUARTERLY REPORTS (when user mentions \u0027kvartal\u0027, \u0027quarterly\u0027): Use reportType=\u0027quarterly\u0027\n\uD83D\uDCC6 WEEKLY REPORTS (when user mentions \u0027vecka\u0027, \u0027weekly\u0027): Use reportType=\u0027weekly\u0027\n\u26A0\uFE0F COMPLEX WEEKLY REQUESTS: For \u0027fg vecka\u0027 (previous week) or specific week filters, simplify to yearly profit_loss report\n\n\uD83D\uDEA8 CRITICAL EXAMPLES:\n\u2022 \u0027utgiftsrapport f\u00F6r 2023 med prydlig startsida\u0027 \u2192 reportType=\u0027expenses\u0027, year=\u00272023\u0027\n\u2022 \u0027professionell utgiftsrapport f\u00F6r 2023\u0027 \u2192 reportType=\u0027expenses\u0027, year=\u00272023\u0027\n\u2022 \u0027rapport f\u00F6r 2024 med startsida d\u00E4r du kan se projekt\u0027 \u2192 reportType=\u0027projects\u0027, year=\u00272024\u0027\n\u2022 \u0027rapport med startsida f\u00F6r pivot som visar kvartal\u0027 \u2192 reportType=\u0027quarterly\u0027\n\u2022 \u0027rapport f\u00F6r 2022 med startsida som visar bruttovinst\u0027 \u2192 reportType=\u0027profit_loss\u0027, year=\u00272022\u0027\n\u2022 \u0027rapport f\u00F6r 2022 med bruttovinst f\u00F6r fg vecka\u0027 \u2192 reportType=\u0027profit_loss\u0027, year=\u00272022\u0027 (ignore week filter)\n\u2022 \u0027momsrapport f\u00F6r 2025 Q3\u0027 \u2192 reportType=\u0027vat\u0027, year=\u00272025\u0027, period=\u0027Q3\u0027\n\u2022 \u0027balansrapport f\u00F6r 2024\u0027 \u2192 reportType=\u0027balance\u0027, year=\u00272024\u0027\n\nReturns step-by-step instructions for creating the requested financial report. Follow the returned instructions exactly.",
+          "parameters": {
+            "reportType": {
+              "type": "string",
+              "required": false,
+              "description": "\uD83C\uDFAF KRITISK PARAMETER: Typ av rapport baserat p\u00E5 anv\u00E4ndarens EXAKTA ord:\n\u2022 \u0027expenses\u0027 = UTGIFTSRAPPORT (n\u00E4r anv\u00E4ndaren s\u00E4ger \u0027utgifter\u0027, \u0027utgiftsrapport\u0027, \u0027kostnader\u0027, \u0027expenses\u0027)\n\u2022 \u0027projects\u0027 = projektrapport (n\u00E4r anv\u00E4ndaren s\u00E4ger \u0027projekt\u0027, \u0027project\u0027)\n\u2022 \u0027revenue\u0027 = int\u00E4ktsrapport (n\u00E4r anv\u00E4ndaren s\u00E4ger \u0027int\u00E4kter\u0027, \u0027oms\u00E4ttning\u0027)\n\u2022 \u0027profit_loss\u0027 = resultatrapport (n\u00E4r anv\u00E4ndaren s\u00E4ger \u0027resultat\u0027, \u0027bruttovinst\u0027)\n\u2022 \u0027vat\u0027 = momsrapport (n\u00E4r anv\u00E4ndaren s\u00E4ger \u0027moms\u0027, \u0027momsrapport\u0027, \u0027vat\u0027)\n\u2022 \u0027balance\u0027 = balansrapport (n\u00E4r anv\u00E4ndaren s\u00E4ger \u0027balans\u0027, \u0027balansrapport\u0027, \u0027balance\u0027)\n\u2022 \u0027quarterly\u0027 = kvartalsrapport (n\u00E4r anv\u00E4ndaren s\u00E4ger \u0027kvartal\u0027, \u0027quarterly\u0027)\n\u2022 \u0027weekly\u0027 = veckorapport (n\u00E4r anv\u00E4ndaren s\u00E4ger \u0027vecka\u0027, \u0027weekly\u0027)\n\u2022 \u0027profit_loss\u0027 = f\u00F6r komplexa veckospecifika beg\u00E4randen som \u0027bruttovinst f\u00F6r fg vecka\u0027\n\uD83D\uDEA8 SPECIELLT VIKTIGT: F\u00F6r \u0027utgiftsrapport f\u00F6r 2023\u0027 \u2192 M\u00C5STE anv\u00E4nda reportType=\u0027expenses\u0027!\n\u26A0\uFE0F VECKOSPECIFIKA FILTER: Om anv\u00E4ndaren beg\u00E4r \u0027fg vecka\u0027 eller specifika veckofilter, anv\u00E4nd profit_loss ist\u00E4llet f\u00F6r weekly\nVIKTIGT: Anv\u00E4nd OLIKA reportType f\u00F6r OLIKA f\u00F6rfr\u00E5gningar!"
+            },
+            "year": {
+              "type": "string",
+              "required": false,
+              "description": "\uD83D\uDDD3\uFE0F EXAKT \u00C5R fr\u00E5n anv\u00E4ndarens f\u00F6rfr\u00E5gan:\n\u2022 \u00272023\u0027 f\u00F6r 2023-specifika rapporter\n\u2022 \u00272024\u0027 f\u00F6r 2024-specifika rapporter  \n\u2022 \u00272022\u0027 f\u00F6r 2022-specifika rapporter\n\u2022 \u00272019-2024\u0027 f\u00F6r 5-\u00E5rs rapporter\nVIKTIGT: Anv\u00E4nd det EXAKTA \u00E5ret anv\u00E4ndaren n\u00E4mner!"
+            },
+            "language": {
+              "type": "string",
+              "required": false,
+              "description": "Rapportspr\u00E5k: \u0027sv\u0027 f\u00F6r svenska, \u0027en\u0027 f\u00F6r engelska",
+              "default": "sv"
+            }
+          }
+        },
+        {
+          "name": "SetReportTemplateAsync",
+          "description": "V\u00E4ljer mallstil f\u00F6r Excel-rapporten. Anv\u00E4nd denna funktion f\u00F6r att ange vilken professionell mallstil som ska anv\u00E4ndas f\u00F6r Excel-rapporten: \u0027corporate\u0027 f\u00F6r f\u00F6retagsstil, \u0027modern\u0027 f\u00F6r modern design, eller \u0027classic\u0027 f\u00F6r klassisk stil.",
+          "parameters": {
+            "reportJobId": {
+              "type": "string",
+              "required": false,
+              "description": "Rapport-jobb ID som ska f\u00E5 ny mallstil"
+            },
+            "templateStyle": {
+              "type": "string",
+              "required": false,
+              "description": "Mallstil att anv\u00E4nda: \u0027corporate\u0027 (f\u00F6retag), \u0027modern\u0027 (modern), \u0027classic\u0027 (klassisk)",
+              "default": "corporate"
+            }
+          }
+        },
+        {
+          "name": "AddFrontPageAsync",
+          "description": "Creates professional front page with KPI values from SIE4 data. Generates KPI cards showing financial data (liquidity, revenue, expenses, profit) calculated from accounting data.",
+          "parameters": {
+            "reportJobId": {
+              "type": "string",
+              "required": false,
+              "description": "Report job ID"
+            },
+            "title": {
+              "type": "string",
+              "required": false,
+              "description": "Report title"
+            },
+            "subtitle": {
+              "type": "string",
+              "required": false,
+              "description": "Report subtitle"
+            },
+            "companyName": {
+              "type": "string",
+              "required": false,
+              "description": "Company name"
+            }
+          }
+        },
+        {
+          "name": "AddChartAsync",
+          "description": "\uD83D\uDCCA STEG 3A: L\u00E4gger till SPECIFIKA diagram baserat p\u00E5 rapporttyp:\n\n\uD83C\uDFAF UTGIFTSRAPPORTER \u2192 chartType=\u0027expense_breakdown\u0027 (cirkeldiagram f\u00F6r kostnadsf\u00F6rdelning)\n\uD83D\uDCC8 PROJEKTRAPPORTER \u2192 chartType=\u0027project_revenue\u0027 (stapeldiagram f\u00F6r projektint\u00E4kter)\n\uD83D\uDCB0 INT\u00C4KTSRAPPORTER \u2192 chartType=\u0027revenue_trend\u0027 (linjediagram f\u00F6r int\u00E4ktsutveckling)\n\uD83D\uDCCB RESULTATRAPPORTER \u2192 chartType=\u0027profit_margin\u0027 (stapeldiagram f\u00F6r marginaler)\n\uD83D\uDD04 KVARTALSRAPPORTER \u2192 chartType=\u0027quarterly_comparison\u0027 (stapeldiagram per kvartal)\n\uD83D\uDCC6 VECKORAPPORTER \u2192 chartType=\u0027weekly_trend\u0027 (linjediagram f\u00F6r veckotrend)\n\nVIKTIGT: V\u00E4lj chartType baserat p\u00E5 rapportens SYFTE, inte generiskt!",
+          "parameters": {
+            "reportJobId": {
+              "type": "string",
+              "required": false,
+              "description": "Rapport-jobb ID fr\u00E5n CreateReportJobFromFileAsync d\u00E4r diagrammet ska l\u00E4ggas till"
+            },
+            "chartType": {
+              "type": "string",
+              "required": false,
+              "description": "\uD83C\uDFAF KRITISK: V\u00E4lj chartType baserat p\u00E5 rapporttyp:\n\u2022 \u0027expense_breakdown\u0027 = f\u00F6r UTGIFTSRAPPORTER (cirkeldiagram)\n\u2022 \u0027project_revenue\u0027 = f\u00F6r PROJEKTRAPPORTER (stapeldiagram)\n\u2022 \u0027revenue_trend\u0027 = f\u00F6r INT\u00C4KTSRAPPORTER (linjediagram)\n\u2022 \u0027profit_margin\u0027 = f\u00F6r RESULTATRAPPORTER (stapeldiagram)\n\u2022 \u0027quarterly_comparison\u0027 = f\u00F6r KVARTALSRAPPORTER (stapeldiagram)\n\u2022 \u0027weekly_trend\u0027 = f\u00F6r VECKORAPPORTER (linjediagram)\nVIKTIGT: Anv\u00E4nd OLIKA chartType f\u00F6r OLIKA rapporter!"
+            },
+            "title": {
+              "type": "string",
+              "required": false,
+              "description": "Titel p\u00E5 diagrammet som visas i Excel-rapporten"
+            },
+            "dataSource": {
+              "type": "string",
+              "required": false,
+              "description": "Datak\u00E4lla f\u00F6r diagrammet: \u0027historical\u0027 (historisk data), \u0027forecast\u0027 (prognosdata), \u0027projects\u0027 (projektdata)",
+              "default": "historical"
+            }
+          }
+        },
+        {
+          "name": "AddTableAsync",
+          "description": "Add a data table component to the report",
+          "parameters": {
+            "reportJobId": {
+              "type": "string",
+              "required": false,
+              "description": "Report job ID"
+            },
+            "tableType": {
+              "type": "string",
+              "required": false,
+              "description": "Type of table (transactions, monthly_summary, account_summary)"
+            },
+            "title": {
+              "type": "string",
+              "required": false,
+              "description": "Table title"
+            },
+            "sortable": {
+              "type": "boolean",
+              "required": false,
+              "description": "Enable sorting functionality",
+              "default": true
+            }
+          }
+        },
+        {
+          "name": "FinishReportAsync",
+          "description": "FINAL STEP: Completes Excel report generation and returns file path. Use after adding all components (charts, pivot tables, etc). Creates final .xlsx file and returns path for email delivery.",
+          "parameters": {
+            "reportJobId": {
+              "type": "string",
+              "required": false,
+              "description": "Rapport-jobb ID fr\u00E5n CreateReportJobFromFileAsync som ska slutf\u00F6ras till Excel-fil"
+            }
+          }
+        },
+        {
+          "name": "AddPivotTableAsync",
+          "description": "\uD83D\uDCCB STEG 3B: L\u00E4gger till SPECIFIKA pivot-tabeller baserat p\u00E5 rapporttyp:\n\n\uD83C\uDFAF UTGIFTSRAPPORTER \u2192 pivotType=\u0027account_breakdown\u0027 (gruppera per konto/kategori)\n\uD83D\uDCC8 PROJEKTRAPPORTER \u2192 pivotType=\u0027project_costs\u0027 (gruppera per projekt)\n\uD83D\uDCB0 INT\u00C4KTSRAPPORTER \u2192 pivotType=\u0027monthly_revenue\u0027 (gruppera per m\u00E5nad)\n\uD83D\uDCCB RESULTATRAPPORTER \u2192 pivotType=\u0027profit_analysis\u0027 (gruppera per resultatpost)\n\uD83D\uDD04 KVARTALSRAPPORTER \u2192 pivotType=\u0027quarterly_breakdown\u0027 (gruppera per kvartal)\n\uD83D\uDCC6 VECKORAPPORTER \u2192 pivotType=\u0027weekly_summary\u0027 (gruppera per vecka)\n\nVIKTIGT: V\u00E4lj pivotType baserat p\u00E5 rapportens SYFTE och TIDSPERIOD!",
+          "parameters": {
+            "reportJobId": {
+              "type": "string",
+              "required": false,
+              "description": "Rapport-jobb ID fr\u00E5n CreateReportJobFromFileAsync d\u00E4r pivot-tabellen ska l\u00E4ggas till"
+            },
+            "pivotType": {
+              "type": "string",
+              "required": false,
+              "description": "\uD83C\uDFAF KRITISK: V\u00E4lj pivotType baserat p\u00E5 rapporttyp:\n\u2022 \u0027account_breakdown\u0027 = f\u00F6r UTGIFTSRAPPORTER (gruppera per konto)\n\u2022 \u0027project_costs\u0027 = f\u00F6r PROJEKTRAPPORTER (gruppera per projekt)\n\u2022 \u0027monthly_revenue\u0027 = f\u00F6r INT\u00C4KTSRAPPORTER (gruppera per m\u00E5nad)\n\u2022 \u0027profit_analysis\u0027 = f\u00F6r RESULTATRAPPORTER (gruppera per resultatpost)\n\u2022 \u0027quarterly_breakdown\u0027 = f\u00F6r KVARTALSRAPPORTER (gruppera per kvartal)\n\u2022 \u0027weekly_summary\u0027 = f\u00F6r VECKORAPPORTER (gruppera per vecka)\nVIKTIGT: Anv\u00E4nd OLIKA pivotType f\u00F6r OLIKA rapporter!"
+            },
+            "title": {
+              "type": "string",
+              "required": false,
+              "description": "Titel p\u00E5 pivot-tabellen som visas i Excel-rapporten"
+            },
+            "groupBy": {
+              "type": "string",
+              "required": false,
+              "description": "F\u00E4lt att gruppera efter: \u0027Month\u0027 (m\u00E5nad), \u0027Project\u0027 (projekt), \u0027Account\u0027 (konto)",
+              "default": "Month"
+            },
+            "aggregateBy": {
+              "type": "string",
+              "required": false,
+              "description": "F\u00E4lt att aggregera: \u0027Amount\u0027 (belopp), \u0027Revenue\u0027 (int\u00E4kter), \u0027Costs\u0027 (kostnader)",
+              "default": "Amount"
+            }
+          }
+        },
+        {
+          "name": "AddComponentAsync",
+          "description": "\uD83C\uDFD7\uFE0F KRITISK FUNKTION: L\u00E4gger till SPECIALISERADE komponenter f\u00F6r specifika rapporttyper:\n\n\u2696\uFE0F componentType=\u0027balancesheet\u0027 \u2192 Balansr\u00E4kning med tillg\u00E5ngar, skulder och eget kapital\n\uD83E\uDDFE componentType=\u0027vatreport\u0027 \u2192 Momsredovisning med svenska momskonton (2610, 2620, 2630, 2640)\n\uD83D\uDCCA componentType=\u0027incomestatement\u0027 \u2192 Resultatr\u00E4kning med int\u00E4kter och kostnader\n\uD83D\uDCCB componentType=\u0027table\u0027 \u2192 Datatabell med transaktioner\n\uD83D\uDCC8 componentType=\u0027chart\u0027 \u2192 Standarddiagram\n\uD83D\uDD04 componentType=\u0027pivot\u0027 \u2192 Pivot-tabell f\u00F6r dataanalys\n\nOBLIGATORISK f\u00F6r balansrapporter, momsrapporter och \u00E5rsrapporter!",
+          "parameters": {
+            "reportJobId": {
+              "type": "string",
+              "required": false,
+              "description": "Report job ID"
+            },
+            "componentType": {
+              "type": "string",
+              "required": false,
+              "description": "Type of component (balancesheet, vatreport, incomestatement, table, chart, pivot)"
+            },
+            "title": {
+              "type": "string",
+              "required": false,
+              "description": "Component title"
+            }
+          }
+        },
+        {
+          "name": "AddMLAnalysisAsync",
+          "description": "Add an ML analysis component to the report with natural language insights",
+          "parameters": {
+            "reportJobId": {
+              "type": "string",
+              "required": false,
+              "description": "Report job ID"
+            },
+            "analysisType": {
+              "type": "string",
+              "required": false,
+              "description": "Type of analysis (trend_analysis, forecast, anomaly_detection)"
+            },
+            "title": {
+              "type": "string",
+              "required": false,
+              "description": "Component title"
+            },
+            "confidenceLevel": {
+              "type": "number",
+              "required": false,
+              "description": "Confidence level for analysis (0.5-1.0)",
+              "default": 0.95
+            }
+          }
+        },
+        {
+          "name": "AddAdvancedChartAsync",
+          "description": "\uD83D\uDCCA STEG 3D: L\u00E4gger till AVANCERADE diagram f\u00F6r specialiserad visualisering:\n\n\uD83C\uDF0A chartType=\u0027waterfall\u0027 \u2192 Visar ackumulerade f\u00F6r\u00E4ndringar \u00F6ver tid\n\uD83D\uDCC5 chartType=\u0027gantt\u0027 \u2192 Projektschema och tidslinjer\n\uD83D\uDD04 chartType=\u0027combo\u0027 \u2192 Kombinerar staplar och linjer\n\uD83D\uDCC8 chartType=\u0027area\u0027 \u2192 Ackumulerad utveckling \u00F6ver tid\n\uD83C\uDFAF chartType=\u0027scatter\u0027 \u2192 Korrelationsanalys mellan variabler\n\uD83D\uDD3B chartType=\u0027funnel\u0027 \u2192 F\u00F6rs\u00E4ljningstratt och konvertering\n\uD83C\uDF33 chartType=\u0027treemap\u0027 \u2192 Hierarkisk datavisualisering\n\uD83D\uDCE6 chartType=\u0027boxwhisker\u0027 \u2192 Statistisk f\u00F6rdelning\n\uD83D\uDCC8 chartType=\u0027stock\u0027 \u2192 OHLC finansiella instrument\n\nAnv\u00E4nd f\u00F6r avancerad datavisualisering som kr\u00E4ver specialiserade diagramtyper.",
+          "parameters": {
+            "reportJobId": {
+              "type": "string",
+              "required": false,
+              "description": "Report job ID"
+            },
+            "chartType": {
+              "type": "string",
+              "required": false,
+              "description": "Type of advanced chart (waterfall, gantt, combo, area, scatter, funnel, treemap, boxwhisker, stock)"
+            },
+            "title": {
+              "type": "string",
+              "required": false,
+              "description": "Chart title",
+              "default": "Avancerat Diagram"
+            }
+          }
+        },
+        {
+          "name": "AddFinancialAnalysisAsync",
+          "description": "\uD83D\uDCB0 STEG 3E: L\u00E4gger till SPECIALISERAD finansiell analys:\n\n\uD83D\uDCA7 analysisType=\u0027cashflow\u0027 \u2192 Kassafl\u00F6desanalys och likviditetsprognos\n\uD83D\uDCCA analysisType=\u0027budgetvsactual\u0027 \u2192 J\u00E4mf\u00F6relse budget mot utfall\n\u2696\uFE0F analysisType=\u0027breakeven\u0027 \u2192 Nollpunktsanalys och l\u00F6nsamhet\n\uD83D\uDC8E analysisType=\u0027roi\u0027 \u2192 Avkastningsanalys p\u00E5 investeringar\n\uD83D\uDCC8 analysisType=\u0027ratios\u0027 \u2192 Finansiella nyckeltal och KPI:er\n\uD83D\uDCC9 analysisType=\u0027variance\u0027 \u2192 Avvikelseanalys och trendbrott\n\uD83D\uDCCA analysisType=\u0027trend\u0027 \u2192 L\u00E5ngsiktig trendutveckling\n\nAnv\u00E4nd f\u00F6r djupg\u00E5ende ekonomisk analys som kr\u00E4ver specialiserade ber\u00E4kningar och visualiseringar.",
+          "parameters": {
+            "reportJobId": {
+              "type": "string",
+              "required": false,
+              "description": "Report job ID"
+            },
+            "analysisType": {
+              "type": "string",
+              "required": false,
+              "description": "Type of financial analysis (cashflow, budgetvsactual, breakeven, roi, ratios, variance, trend)"
+            },
+            "title": {
+              "type": "string",
+              "required": false,
+              "description": "Analysis title",
+              "default": "Finansiell Analys"
+            }
+          }
+        },
+        {
+          "name": "AnalyzeFinancialDataAsync",
+          "description": "Analyzes financial data using machine learning techniques for trends, forecasts, and anomaly detection",
+          "parameters": {
+            "sie4Data": {
+              "type": "string",
+              "required": false,
+              "description": "SIE4 financial data content"
+            },
+            "analysisType": {
+              "type": "string",
+              "required": false,
+              "description": "Type of analysis: trend_analysis, forecast, anomaly_detection"
+            },
+            "language": {
+              "type": "string",
+              "required": false,
+              "description": "Language for results: sv or en",
+              "default": "sv"
+            }
+          }
+        },
+        {
+          "name": "GenerateExecutiveSummaryAsync",
+          "description": "Generates comprehensive executive summary from financial data",
+          "parameters": {
+            "sie4Data": {
+              "type": "string",
+              "required": false,
+              "description": "SIE4 financial data content"
+            },
+            "language": {
+              "type": "string",
+              "required": false,
+              "description": "Language for summary: sv or en",
+              "default": "sv"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Dropbox",
+      "description": "File storage and sharing operations using Dropbox API",
+      "category": "Storage",
+      "version": "1.0.0",
+      "functions": [
+        {
+          "name": "ListFiles",
+          "description": "Listar filer i en Dropbox-mapp",
+          "parameters": {
+            "path": {
+              "type": "string",
+              "required": false,
+              "description": "S\u00F6kv\u00E4g till mappen (t.ex. /Documents)",
+              "default": ""
+            }
+          }
+        },
+        {
+          "name": "UploadFile",
+          "description": "Laddar upp en fil till Dropbox",
+          "parameters": {
+            "fileName": {
+              "type": "string",
+              "required": false,
+              "description": "Namn p\u00E5 filen"
+            },
+            "content": {
+              "type": "string",
+              "required": false,
+              "description": "Filinneh\u00E5ll som base64-str\u00E4ng"
+            },
+            "path": {
+              "type": "string",
+              "required": false,
+              "description": "S\u00F6kv\u00E4g d\u00E4r filen ska sparas (t.ex. /Documents/)",
+              "default": "/"
+            }
+          }
+        },
+        {
+          "name": "DownloadFile",
+          "description": "Laddar ner en fil fr\u00E5n Dropbox och sparar den i TempFiles f\u00F6r vidare bearbetning",
+          "parameters": {
+            "filePath": {
+              "type": "string",
+              "required": false,
+              "description": "Fullst\u00E4ndig s\u00F6kv\u00E4g till filen (t.ex. /Documents/file.txt)"
+            }
+          }
+        },
+        {
+          "name": "CreateFolder",
+          "description": "Skapar en ny mapp i Dropbox",
+          "parameters": {
+            "folderPath": {
+              "type": "string",
+              "required": false,
+              "description": "Fullst\u00E4ndig s\u00F6kv\u00E4g f\u00F6r den nya mappen (t.ex. /Documents/NewFolder)"
+            }
+          }
+        },
+        {
+          "name": "ReadFile",
+          "description": "L\u00E4ser inneh\u00E5llet i en fil fr\u00E5n Dropbox",
+          "parameters": {
+            "filePath": {
+              "type": "string",
+              "required": false,
+              "description": "Fullst\u00E4ndig s\u00F6kv\u00E4g till filen (t.ex. /Documents/file.txt)"
+            }
+          }
+        },
+        {
+          "name": "DeleteFile",
+          "description": "Raderar en fil eller mapp fr\u00E5n Dropbox",
+          "parameters": {
+            "path": {
+              "type": "string",
+              "required": false,
+              "description": "Fullst\u00E4ndig s\u00F6kv\u00E4g till filen eller mappen"
+            }
+          }
+        },
+        {
+          "name": "MoveFile",
+          "description": "Flyttar en fil eller mapp till en ny plats i Dropbox",
+          "parameters": {
+            "fromPath": {
+              "type": "string",
+              "required": false,
+              "description": "Nuvarande s\u00F6kv\u00E4g till filen eller mappen"
+            },
+            "toPath": {
+              "type": "string",
+              "required": false,
+              "description": "Ny s\u00F6kv\u00E4g f\u00F6r filen eller mappen"
+            }
+          }
+        },
+        {
+          "name": "RenameFile",
+          "description": "Byter namn p\u00E5 en fil eller mapp i Dropbox",
+          "parameters": {
+            "currentPath": {
+              "type": "string",
+              "required": false,
+              "description": "Nuvarande s\u00F6kv\u00E4g till filen eller mappen"
+            },
+            "newName": {
+              "type": "string",
+              "required": false,
+              "description": "Nytt namn (utan s\u00F6kv\u00E4g)"
+            }
+          }
+        },
+        {
+          "name": "DiagnoseDropboxConnection",
+          "description": "K\u00F6r en komplett diagnostisk test av Dropbox-anslutningen f\u00F6r fels\u00F6kning",
+          "parameters": {}
+        }
+      ]
+    },
+    {
+      "name": "DocumentInterpreter",
+      "description": "AI-powered interpretation of financial documents like invoices, receipts, and other accounting documents",
+      "category": "Document Processing",
+      "version": "1.0.0",
+      "functions": [
+        {
+          "name": "InterpretDocumentFromTextAsync",
+          "description": "Parses financial documents and returns structured data with Fortnox-ready fields.\n\nIMPORTANT - Document Types:\n- SupplierInvoice = Invoice WE received (we need to pay) \u2192 Use FortnoxPlugin.CreateSupplierInvoiceAsync\n- CustomerInvoice = Invoice WE sent (we expect payment) \u2192 Use FortnoxPlugin.BookkeepInvoiceAsync\n- Receipt = Purchase receipt\n\nReturns JSON with:\n- documentType: The detected type (SupplierInvoice, CustomerInvoice, Receipt)\n- extractedData.fortnoxData: Complete data structure ready for Fortnox API\n- extractedData.fortnoxData._workflow: Step-by-step instructions for creating the document in Fortnox\n- extractedData.fortnoxData.supplierInvoiceRows: Invoice lines with intelligent account number suggestions\n\nFor SupplierInvoice, follow the _workflow steps to create the invoice in Fortnox.",
+          "parameters": {
+            "content": {
+              "type": "string",
+              "required": false,
+              "description": "Text content of the document to parse"
+            },
+            "documentType": {
+              "type": "string",
+              "required": false,
+              "description": "Expected document type (SupplierInvoice, Receipt, CustomerInvoice, etc.)"
+            },
+            "source": {
+              "type": "string",
+              "required": false,
+              "description": "Source information (email, file path, etc.)"
+            }
+          }
+        },
+        {
+          "name": "DetectDocumentTypeAsync",
+          "description": "Detects the type of a financial document from its content using keyword patterns",
+          "parameters": {
+            "content": {
+              "type": "string",
+              "required": false,
+              "description": "Content of the document to analyze"
+            }
+          }
+        },
+        {
+          "name": "ValidateDocumentAsync",
+          "description": "Validates a parsed financial document structure for completeness and basic accuracy",
+          "parameters": {
+            "documentJson": {
+              "type": "string",
+              "required": false,
+              "description": "JSON representation of the document to validate"
+            }
+          }
+        },
+        {
+          "name": "GetSupportedDocumentTypes",
+          "description": "Gets the list of supported financial document types",
+          "parameters": {}
+        },
+        {
+          "name": "ProcessEmailAttachmentsAsync",
+          "description": "Processes financial documents from email attachments",
+          "parameters": {
+            "emailSource": {
+              "type": "string",
+              "required": false,
+              "description": "Email source information from MailPlugin"
+            },
+            "attachmentFilter": {
+              "type": "string",
+              "required": false,
+              "description": "File extension filter (e.g., \u0027.pdf,.jpg,.png\u0027)",
+              "default": ".pdf,.jpg,.jpeg,.png,.tiff,.txt"
+            }
+          }
+        },
+        {
+          "name": "InterpretDocumentFromBinaryAsync",
+          "description": "Parses financial documents from binary content (PDF, images) using OCR and returns Fortnox-ready data.\n\nIMPORTANT - Document Types:\n- SupplierInvoice = Invoice WE received (we need to pay) \u2192 Use FortnoxPlugin.CreateSupplierInvoiceAsync\n- CustomerInvoice = Invoice WE sent (we expect payment) \u2192 Use FortnoxPlugin.BookkeepInvoiceAsync\n- Receipt = Purchase receipt\n\nReturns JSON with:\n- documentType: The detected type (SupplierInvoice, CustomerInvoice, Receipt)\n- extractedData.fortnoxData: Complete data structure ready for Fortnox API\n- extractedData.fortnoxData._workflow: Step-by-step instructions for creating the document in Fortnox\n- extractedData.fortnoxData.supplierInvoiceRows: Invoice lines with intelligent account number suggestions\n\nFor SupplierInvoice, follow the _workflow steps to create the invoice in Fortnox.",
+          "parameters": {
+            "contentBase64": {
+              "type": "string",
+              "required": false,
+              "description": "Base64-encoded binary content of the document"
+            },
+            "contentType": {
+              "type": "string",
+              "required": false,
+              "description": "MIME content type (application/pdf, image/jpeg, image/png, etc.)"
+            },
+            "filename": {
+              "type": "string",
+              "required": false,
+              "description": "Original filename"
+            },
+            "documentType": {
+              "type": "string",
+              "required": false,
+              "description": "Expected document type (SupplierInvoice, Receipt, etc.)"
+            },
+            "source": {
+              "type": "string",
+              "required": false,
+              "description": "Source information (email, file path, etc.)"
+            }
+          }
+        },
+        {
+          "name": "AnalyzeDropboxResponseAsync",
+          "description": "Analyzes a document from Dropbox response containing file ID. Use this after downloading a file with DropboxPlugin.",
+          "parameters": {
+            "dropboxResponse": {
+              "type": "string",
+              "required": false,
+              "description": "Response from DropboxPlugin DownloadFile function"
+            },
+            "fileName": {
+              "type": "string",
+              "required": false,
+              "description": "Name of the file being analyzed"
+            },
+            "documentType": {
+              "type": "string",
+              "required": false,
+              "description": "Expected document type (SupplierInvoice, Receipt, etc.)"
+            },
+            "source": {
+              "type": "string",
+              "required": false,
+              "description": "Source information"
+            }
+          }
+        },
+        {
+          "name": "AnalyzeEmailAttachmentAsync",
+          "description": "Analyzes an email attachment using its TempFiles file ID. Use this after reading emails with MailPlugin.",
+          "parameters": {
+            "tempFileId": {
+              "type": "string",
+              "required": false,
+              "description": "TempFiles file ID from email attachment"
+            },
+            "fileName": {
+              "type": "string",
+              "required": false,
+              "description": "Name of the attachment file"
+            },
+            "documentType": {
+              "type": "string",
+              "required": false,
+              "description": "Expected document type (SupplierInvoice, Receipt, etc.)"
+            },
+            "source": {
+              "type": "string",
+              "required": false,
+              "description": "Source information"
+            }
+          }
+        },
+        {
+          "name": "ProcessCloudStorageAsync",
+          "description": "Processes financial documents from cloud storage services",
+          "parameters": {
+            "storageType": {
+              "type": "string",
+              "required": false,
+              "description": "Storage type (GoogleDrive, Dropbox, OneDrive)"
+            },
+            "folderPath": {
+              "type": "string",
+              "required": false,
+              "description": "Folder path in the storage"
+            },
+            "fileFilter": {
+              "type": "string",
+              "required": false,
+              "description": "File extension filter (e.g., \u0027.pdf,.jpg,.png\u0027)",
+              "default": ".pdf,.jpg,.jpeg,.png,.tiff,.txt"
+            }
+          }
+        },
+        {
+          "name": "InterpretDocumentFromFileAsync",
+          "description": "Parses a financial document from a file path or TempFiles ID, automatically detecting content type and applying OCR if needed. Saves OCR results to TempFiles for later retrieval. Tolka dokument fr\u00E5n fil, unders\u00F6k PDF, kolla upp dokument, analysera filer.",
+          "parameters": {
+            "filePath": {
+              "type": "string",
+              "required": false,
+              "description": "Path to the document file to process, or TempFiles GUID"
+            },
+            "documentType": {
+              "type": "string",
+              "required": false,
+              "description": "Expected document type (SupplierInvoice, Receipt, etc.)"
+            },
+            "source": {
+              "type": "string",
+              "required": false,
+              "description": "Source information (email, folder, etc.)"
+            }
+          }
+        },
+        {
+          "name": "GetOcrResultsAsync",
+          "description": "Retrieves OCR extraction results from a previously processed document using the TempFile ID",
+          "parameters": {
+            "fileId": {
+              "type": "string",
+              "required": false,
+              "description": "TempFile ID of the OCR result file"
+            }
+          }
+        },
+        {
+          "name": "ConvertCustomerOnboardingToFortnoxAsync",
+          "description": "Converts a CustomerOnboarding document to Fortnox-compatible JSON format for creating customers in Fortnox",
+          "parameters": {
+            "customerOnboardingJson": {
+              "type": "string",
+              "required": false,
+              "description": "JSON representation of a CustomerOnboarding document"
+            }
+          }
+        },
+        {
+          "name": "ParseCustomerOnboardingToFortnoxAsync",
+          "description": "Parses customer onboarding text and directly returns Fortnox-compatible JSON for creating customers. Skapa kund fr\u00E5n text, tolka kunduppgifter, l\u00E4gg till ny kund.",
+          "parameters": {
+            "content": {
+              "type": "string",
+              "required": false,
+              "description": "Text content of the customer onboarding document"
+            },
+            "source": {
+              "type": "string",
+              "required": false,
+              "description": "Source information (email, file path, etc.)"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "GoogleSearch",
+      "description": "Web search using Google Custom Search API",
+      "category": "Information",
+      "version": "1.0.0",
+      "functions": [
+        {
+          "name": "SearchPersonAsync",
+          "description": "S\u00F6ker efter information om en person p\u00E5 webben med hj\u00E4lp av Google Custom Search API.",
+          "parameters": {
+            "name": {
+              "type": "string",
+              "required": false,
+              "description": "Personens namn"
+            },
+            "location": {
+              "type": "string",
+              "required": false,
+              "description": "Personens plats/location"
+            },
+            "company": {
+              "type": "string",
+              "required": false,
+              "description": "Personens f\u00F6retag/company"
+            }
+          }
+        },
+        {
+          "name": "SearchPersonWithAllDataAsync",
+          "description": "S\u00F6ker efter information om en person med all tillg\u00E4nglig data och testar olika kombinationer f\u00F6r att hitta mer information.",
+          "parameters": {
+            "name": {
+              "type": "string",
+              "required": false,
+              "description": "Personens namn"
+            },
+            "personData": {
+              "type": "string",
+              "required": false,
+              "description": "All tillg\u00E4nglig data om personen (adress, f\u00F6retag, telefon, e-post, etc.)"
+            }
+          }
+        },
+        {
+          "name": "SearchWebAsync",
+          "description": "S\u00F6ker efter allm\u00E4n information p\u00E5 webben med hj\u00E4lp av Google Custom Search API.",
+          "parameters": {
+            "query": {
+              "type": "string",
+              "required": false,
+              "description": "S\u00F6ktermen"
+            },
+            "maxResults": {
+              "type": "integer",
+              "required": false,
+              "description": "Antal resultat att returnera (1-10)",
+              "default": 5
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Slack",
+      "description": "Team communication and messaging using Slack API",
+      "category": "Communication",
+      "version": "1.0.0",
+      "functions": [
+        {
+          "name": "SendMessage",
+          "description": "Skickar ett meddelande till en Slack-kanal",
+          "parameters": {
+            "channel": {
+              "type": "string",
+              "required": false,
+              "description": "Kanalen att skicka till (t.ex. #general)"
+            },
+            "message": {
+              "type": "string",
+              "required": false,
+              "description": "Meddelandet att skicka"
+            }
+          }
+        },
+        {
+          "name": "SendDirectMessage",
+          "description": "Skickar ett direktmeddelande till en Slack-anv\u00E4ndare",
+          "parameters": {
+            "user": {
+              "type": "string",
+              "required": false,
+              "description": "Anv\u00E4ndarnamn (t.ex. @demo.user eller demo.user)"
+            },
+            "message": {
+              "type": "string",
+              "required": false,
+              "description": "Meddelandet att skicka"
+            }
+          }
+        },
+        {
+          "name": "SendWebhookMessage",
+          "description": "Skickar ett meddelande via Slack webhook",
+          "parameters": {
+            "message": {
+              "type": "string",
+              "required": false,
+              "description": "Meddelandet att skicka"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Geocoding",
+      "description": "Location and geocoding services using OpenCage API",
+      "category": "Information",
+      "version": "1.0.0",
+      "functions": [
+        {
+          "name": "GeocodeAddress",
+          "description": "Konverterar en adress till koordinater (geokodning)",
+          "parameters": {
+            "address": {
+              "type": "string",
+              "required": false,
+              "description": "Adressen att geokoda (t.ex. \u0027Stockholm, Sverige\u0027)"
+            }
+          }
+        },
+        {
+          "name": "ReverseGeocode",
+          "description": "Konverterar koordinater till adress (omv\u00E4nd geokodning)",
+          "parameters": {
+            "latitude": {
+              "type": "number",
+              "required": true,
+              "description": "Latitud (t.ex. 59.3293)"
+            },
+            "longitude": {
+              "type": "number",
+              "required": true,
+              "description": "Longitud (t.ex. 18.0686)"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "MicrosoftOffice",
+      "description": "Microsoft Office integration for documents and productivity",
+      "category": "Productivity",
+      "version": "1.0.0",
+      "functions": [
+        {
+          "name": "ListFiles",
+          "description": "Listar filer i valfri OneDrive-mapp f\u00F6r agent@yourtenant.onmicrosoft.com",
+          "parameters": {
+            "folderName": {
+              "type": "string",
+              "required": false,
+              "description": "Namn p\u00E5 mappen, t.ex. \u0027Work\u0027",
+              "default": "Work"
+            }
+          }
+        },
+        {
+          "name": "UploadFile",
+          "description": "Laddar upp en fil till valfri OneDrive-mapp f\u00F6r agent@yourtenant.onmicrosoft.com",
+          "parameters": {
+            "fileName": {
+              "type": "string",
+              "required": false,
+              "description": "Filnamn"
+            },
+            "content": {
+              "type": "string",
+              "required": false,
+              "description": "Filinneh\u00E5ll som base64-str\u00E4ng"
+            },
+            "folderName": {
+              "type": "string",
+              "required": false,
+              "description": "Namn p\u00E5 mappen, t.ex. \u0027Work\u0027",
+              "default": "Work"
+            }
+          }
+        },
+        {
+          "name": "ReadFile",
+          "description": "L\u00E4ser inneh\u00E5llet i en fil fr\u00E5n valfri OneDrive-mapp f\u00F6r agent@yourtenant.onmicrosoft.com",
+          "parameters": {
+            "fileName": {
+              "type": "string",
+              "required": false,
+              "description": "Namn p\u00E5 filen"
+            },
+            "folderName": {
+              "type": "string",
+              "required": false,
+              "description": "Namn p\u00E5 mappen, t.ex. \u0027Work\u0027",
+              "default": "Work"
+            }
+          }
+        },
+        {
+          "name": "DownloadFile",
+          "description": "Laddar ner en fil fr\u00E5n OneDrive och sparar den via TempFilesService f\u00F6r vidare bearbetning.",
+          "parameters": {
+            "fileName": {
+              "type": "string",
+              "required": false,
+              "description": "Namn p\u00E5 filen"
+            },
+            "folderName": {
+              "type": "string",
+              "required": false,
+              "description": "Namn p\u00E5 mappen, t.ex. \u0027Work\u0027",
+              "default": "Work"
+            }
+          }
+        },
+        {
+          "name": "DeleteFileOrFolder",
+          "description": "Raderar en fil fr\u00E5n valfri OneDrive-mapp f\u00F6r agent@yourtenant.onmicrosoft.com",
+          "parameters": {
+            "fileName": {
+              "type": "string",
+              "required": false,
+              "description": "Namn p\u00E5 filen"
+            },
+            "folderName": {
+              "type": "string",
+              "required": false,
+              "description": "Namn p\u00E5 mappen, t.ex. \u0027Work\u0027",
+              "default": "Work"
+            }
+          }
+        },
+        {
+          "name": "CreateCalendarEvent",
+          "description": "Skapar en kalenderh\u00E4ndelse f\u00F6r agent@yourtenant.onmicrosoft.com",
+          "parameters": {
+            "title": {
+              "type": "string",
+              "required": false,
+              "description": "Titel p\u00E5 h\u00E4ndelsen"
+            },
+            "startTime": {
+              "type": "string",
+              "required": false,
+              "description": "Starttid i ISO 8601-format, t.ex. \u00272024-06-01T10:00:00Z\u0027"
+            },
+            "endTime": {
+              "type": "string",
+              "required": false,
+              "description": "Sluttid i ISO 8601-format, t.ex. \u00272024-06-01T11:00:00Z\u0027"
+            },
+            "description": {
+              "type": "string",
+              "required": false,
+              "description": "Beskrivning av h\u00E4ndelsen",
+              "default": ""
+            }
+          }
+        },
+        {
+          "name": "ListCalendarEvents",
+          "description": "Listar alla kalenderh\u00E4ndelser f\u00F6r agent@yourtenant.onmicrosoft.com",
+          "parameters": {
+            "maxResults": {
+              "type": "integer",
+              "required": false,
+              "description": "Antal h\u00E4ndelser att h\u00E4mta (standard: 10)",
+              "default": 10
+            }
+          }
+        },
+        {
+          "name": "GetCalendarEventDetails",
+          "description": "H\u00E4mtar detaljerad information om en specifik kalenderh\u00E4ndelse",
+          "parameters": {
+            "eventId": {
+              "type": "string",
+              "required": false,
+              "description": "ID f\u00F6r h\u00E4ndelsen"
+            }
+          }
+        },
+        {
+          "name": "UpdateCalendarEvent",
+          "description": "Uppdaterar en befintlig kalenderh\u00E4ndelse",
+          "parameters": {
+            "eventId": {
+              "type": "string",
+              "required": false,
+              "description": "ID f\u00F6r h\u00E4ndelsen"
+            },
+            "newTitle": {
+              "type": "string",
+              "required": false,
+              "description": "Ny titel (l\u00E4mna tom f\u00F6r att beh\u00E5lla nuvarande)"
+            },
+            "newStartTime": {
+              "type": "string",
+              "required": false,
+              "description": "Ny starttid i ISO 8601-format"
+            },
+            "newEndTime": {
+              "type": "string",
+              "required": false,
+              "description": "Ny sluttid i ISO 8601-format"
+            },
+            "newDescription": {
+              "type": "string",
+              "required": false,
+              "description": "Ny beskrivning"
+            }
+          }
+        },
+        {
+          "name": "DeleteCalendarEvent",
+          "description": "Raderar en kalenderh\u00E4ndelse",
+          "parameters": {
+            "eventId": {
+              "type": "string",
+              "required": false,
+              "description": "ID f\u00F6r h\u00E4ndelsen"
+            }
+          }
+        },
+        {
+          "name": "SendTeamsMessageAsync",
+          "description": "Skickar ett Teams-meddelande till en specifik anv\u00E4ndare. Meddelandet levereras via e-post med Teams-styling. VIKTIGT: Anv\u00E4nd exakt det namn anv\u00E4ndaren anger (t.ex. \u0027Anna Andersson\u0027) - konvertera INTE till e-postadress. Funktionen g\u00F6r automatisk uppslagning av namn till r\u00E4tt Office365-adress. Anv\u00E4nd denna funktion n\u00E4r anv\u00E4ndaren ber om att skicka Teams-meddelanden eller kommunicera via Teams.",
+          "parameters": {
+            "recipientNameOrEmail": {
+              "type": "string",
+              "required": false,
+              "description": "Mottagarens EXAKTA namn som anv\u00E4ndaren angav (t.ex. \u0027Anna Andersson\u0027) eller befintlig e-postadress. KONVERTERA INTE namn till e-postadresser - anv\u00E4nd namnet exakt som det anges."
+            },
+            "message": {
+              "type": "string",
+              "required": false,
+              "description": "Det fullst\u00E4ndiga meddelandet som ska skickas till mottagaren via Teams"
+            }
+          }
+        },
+        {
+          "name": "GetRecentTeamsMessages",
+          "description": "H\u00E4mtar de senaste meddelandena fr\u00E5n en Teams-chat",
+          "parameters": {
+            "participantNameOrEmail": {
+              "type": "string",
+              "required": false,
+              "description": "Namn eller e-postadress f\u00F6r chat-deltagaren (t.ex. \u0027Anna Andersson\u0027 eller \u0027anna@example.com\u0027)"
+            },
+            "maxResults": {
+              "type": "integer",
+              "required": false,
+              "description": "Antal meddelanden att h\u00E4mta (standard: 10)",
+              "default": 10
+            }
+          }
+        },
+        {
+          "name": "CreateTeamsChannelAndMessage",
+          "description": "Skapar en Teams-kanal och skickar ett meddelande",
+          "parameters": {
+            "channelName": {
+              "type": "string",
+              "required": false,
+              "description": "Namn p\u00E5 kanalen"
+            },
+            "message": {
+              "type": "string",
+              "required": false,
+              "description": "Meddelandets inneh\u00E5ll"
+            }
+          }
+        },
+        {
+          "name": "ListTeams",
+          "description": "Listar alla Teams som anv\u00E4ndaren \u00E4r medlem i",
+          "parameters": {}
+        },
+        {
+          "name": "SendSimpleTeamsMessage",
+          "description": "Skickar ett enkelt Teams-meddelande direkt till en anv\u00E4ndare (alternativ metod)",
+          "parameters": {
+            "recipientEmail": {
+              "type": "string",
+              "required": false,
+              "description": "E-postadress f\u00F6r mottagaren"
+            },
+            "message": {
+              "type": "string",
+              "required": false,
+              "description": "Meddelandets inneh\u00E5ll"
+            }
+          }
+        },
+        {
+          "name": "ListTeamsUsers",
+          "description": "Listar alla anv\u00E4ndare i Teams-organisationen f\u00F6r debugging",
+          "parameters": {}
+        },
+        {
+          "name": "SendMessageToChannel",
+          "description": "Skickar ett meddelande till en specifik Teams-kanal",
+          "parameters": {
+            "teamId": {
+              "type": "string",
+              "required": false,
+              "description": "Team ID"
+            },
+            "channelIdOrName": {
+              "type": "string",
+              "required": false,
+              "description": "Kanal ID eller namn"
+            },
+            "message": {
+              "type": "string",
+              "required": false,
+              "description": "Meddelandets inneh\u00E5ll"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Mail",
+      "description": "Send and read emails using Mailjet API",
+      "category": "Communication",
+      "version": "1.0.0",
+      "functions": [
+        {
+          "name": "SendEmailAsync",
+          "description": "Send an email using Mailjet with professional delivery assurance",
+          "parameters": {
+            "to": {
+              "type": "string",
+              "required": false,
+              "description": "Recipient email address"
+            },
+            "subject": {
+              "type": "string",
+              "required": false,
+              "description": "Email subject"
+            },
+            "body": {
+              "type": "string",
+              "required": false,
+              "description": "Email body content (can include HTML)"
+            },
+            "isHtml": {
+              "type": "boolean",
+              "required": false,
+              "description": "Whether the body contains HTML markup",
+              "default": true
+            }
+          }
+        },
+        {
+          "name": "SendEmailWithAttachmentAsync",
+          "description": "STEG 5: Skickar e-post med bifogad fil (Excel-rapport) med professionell leveransgaranti. Anv\u00E4nd denna funktion EFTER FinishReportAsync n\u00E4r du har en f\u00E4rdig Excel-rapport som ska skickas till anv\u00E4ndaren. Hanterar automatiskt namn-till-e-post-konvertering fr\u00E5n users.json. Om anv\u00E4ndaren s\u00E4ger \u0027skicka till Anna Andersson\u0027, konvertera namnet till korrekt e-postadress.",
+          "parameters": {
+            "to": {
+              "type": "string",
+              "required": false,
+              "description": "Mottagarens e-postadress eller namn (konverteras automatiskt fr\u00E5n users.json)"
+            },
+            "subject": {
+              "type": "string",
+              "required": false,
+              "description": "E-post\u00E4mne"
+            },
+            "body": {
+              "type": "string",
+              "required": false,
+              "description": "E-postinneh\u00E5ll (kan inneh\u00E5lla HTML)"
+            },
+            "attachmentPath": {
+              "type": "string",
+              "required": false,
+              "description": "Fullst\u00E4ndig s\u00F6kv\u00E4g till filen som ska bifogas (fr\u00E5n FinishReportAsync)"
+            },
+            "attachmentName": {
+              "type": "string",
+              "required": false,
+              "description": "Namn p\u00E5 bilagan (valfritt, anv\u00E4nder filnamn om inte angivet)"
+            },
+            "isHtml": {
+              "type": "boolean",
+              "required": false,
+              "description": "Om inneh\u00E5llet inneh\u00E5ller HTML-markup",
+              "default": true
+            }
+          }
+        },
+        {
+          "name": "ReadUnreadEmailsAsync",
+          "description": "Read unread emails.",
+          "parameters": {
+            "emailAddress": {
+              "type": "string",
+              "required": false,
+              "description": "Email address from users.json"
+            },
+            "username": {
+              "type": "string",
+              "required": false,
+              "description": "Username (same as emailAddress)"
+            },
+            "password": {
+              "type": "string",
+              "required": false,
+              "description": "Password from email-password field in users.json"
+            },
+            "incomingProtocol": {
+              "type": "string",
+              "required": false,
+              "description": "Protocol (IMAP or POP3)",
+              "default": "IMAP"
+            },
+            "incomingServer": {
+              "type": "string",
+              "required": false,
+              "description": "Server from email-server field",
+              "default": "imap.gmail.com"
+            },
+            "incomingPort": {
+              "type": "integer",
+              "required": false,
+              "description": "Port from email-imap-port field",
+              "default": 587
+            },
+            "useSSL": {
+              "type": "boolean",
+              "required": false,
+              "description": "SSL from email-use-ssl field",
+              "default": true
+            },
+            "maxMessages": {
+              "type": "integer",
+              "required": false,
+              "description": "Maximum number of messages to fetch",
+              "default": 10
+            },
+            "fetchAttachments": {
+              "type": "boolean",
+              "required": false,
+              "description": "Whether to fetch attachments",
+              "default": true
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Weather",
+      "description": "Weather information and forecasts using OpenMeteo API",
+      "category": "Information",
+      "version": "1.0.0",
+      "functions": [
+        {
+          "name": "GetCurrentWeather",
+          "description": "H\u00E4mtar aktuellt v\u00E4der f\u00F6r en plats",
+          "parameters": {
+            "latitude": {
+              "type": "number",
+              "required": true,
+              "description": "Latitud (t.ex. 59.3293)"
+            },
+            "longitude": {
+              "type": "number",
+              "required": true,
+              "description": "Longitud (t.ex. 18.0686)"
+            }
+          }
+        },
+        {
+          "name": "GetWeatherForecast",
+          "description": "H\u00E4mtar v\u00E4derprognos f\u00F6r en plats",
+          "parameters": {
+            "latitude": {
+              "type": "number",
+              "required": true,
+              "description": "Latitud (t.ex. 59.3293)"
+            },
+            "longitude": {
+              "type": "number",
+              "required": true,
+              "description": "Longitud (t.ex. 18.0686)"
+            },
+            "days": {
+              "type": "integer",
+              "required": false,
+              "description": "Antal dagar fram\u00E5t (1-7)",
+              "default": 3
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Fortnox",
+      "description": "Plugin for Fortnox accounting integration - manage customers, invoices, and financial data",
+      "category": "Utilities",
+      "version": "1.0.0",
+      "functions": [
+        {
+          "name": "GetAccountsAsync",
+          "description": "H\u00E4mtar en lista med konton fr\u00E5n Fortnox.",
+          "parameters": {}
+        },
+        {
+          "name": "GetAccountAsync",
+          "description": "H\u00E4mtar ett konto fr\u00E5n Fortnox baserat p\u00E5 kontonummer.",
+          "parameters": {
+            "accountNumber": {
+              "type": "string",
+              "required": false,
+              "description": ""
+            }
+          }
+        },
+        {
+          "name": "CreateAccountAsync",
+          "description": "Skapar ett konto i Fortnox.",
+          "parameters": {
+            "account": {
+              "type": "string",
+              "required": false,
+              "description": ""
+            }
+          }
+        },
+        {
+          "name": "UpdateAccountAsync",
+          "description": "Uppdaterar ett konto i Fortnox baserat p\u00E5 kontonummer.",
+          "parameters": {
+            "accountNumber": {
+              "type": "string",
+              "required": false,
+              "description": ""
+            },
+            "account": {
+              "type": "string",
+              "required": false,
+              "description": ""
+            }
+          }
+        },
+        {
+          "name": "DeleteAccountAsync",
+          "description": "Tar bort ett konto fr\u00E5n Fortnox baserat p\u00E5 kontonummer.",
+          "parameters": {
+            "accountNumber": {
+              "type": "string",
+              "required": false,
+              "description": ""
+            }
+          }
+        },
+        {
+          "name": "CreateCustomerAsync",
+          "description": "Skapar en kund i Fortnox.",
+          "parameters": {
+            "customer": {
+              "type": "string",
+              "required": false,
+              "description": ""
+            }
+          }
+        },
+        {
+          "name": "GetCustomerAsync",
+          "description": "H\u00E4mtar en kund fr\u00E5n Fortnox baserat p\u00E5 kundnummer.",
+          "parameters": {
+            "customerNumber": {
+              "type": "string",
+              "required": false,
+              "description": ""
+            }
+          }
+        },
+        {
+          "name": "GetCustomersAsync",
+          "description": "H\u00E4mtar en lista med kunder fr\u00E5n Fortnox.",
+          "parameters": {}
+        },
+        {
+          "name": "DeleteCustomerAsync",
+          "description": "Tar bort en kund fr\u00E5n Fortnox baserat p\u00E5 kundnummer.",
+          "parameters": {
+            "customerNumber": {
+              "type": "string",
+              "required": false,
+              "description": ""
+            }
+          }
+        },
+        {
+          "name": "UpdateCustomerAsync",
+          "description": "Uppdaterar en kund i Fortnox baserat p\u00E5 kundnummer.",
+          "parameters": {
+            "customerNumber": {
+              "type": "string",
+              "required": false,
+              "description": ""
+            },
+            "customer": {
+              "type": "string",
+              "required": false,
+              "description": ""
+            }
+          }
+        },
+        {
+          "name": "BookkeepInvoiceAsync",
+          "description": "Bokf\u00F6r en faktura i Fortnox. Returnerar den bokf\u00F6rda fakturan.",
+          "parameters": {
+            "documentNumber": {
+              "type": "string",
+              "required": false,
+              "description": "Fakturanummer"
+            }
+          }
+        },
+        {
+          "name": "CancelInvoiceAsync",
+          "description": "Makulerar en faktura i Fortnox. Returnerar den makulerade fakturan.",
+          "parameters": {
+            "documentNumber": {
+              "type": "string",
+              "required": false,
+              "description": "Fakturanummer"
+            }
+          }
+        },
+        {
+          "name": "CreateInvoiceAsync",
+          "description": "Skapar en faktura i Fortnox. Returnerar den skapade fakturan.",
+          "parameters": {
+            "invoiceRequest": {
+              "type": "string",
+              "required": false,
+              "description": "Faktura"
+            }
+          }
+        },
+        {
+          "name": "CreditInvoiceAsync",
+          "description": "Krediterar en faktura i Fortnox. Returnerar information om fakturan, f\u00E4ltet CreditInvoiceReference inneh\u00E5ller fakturanumret p\u00E5 den skapade kreditfakturan.",
+          "parameters": {
+            "documentNumber": {
+              "type": "string",
+              "required": false,
+              "description": "Fakturanummer"
+            }
+          }
+        },
+        {
+          "name": "GetInvoiceAsync",
+          "description": "H\u00E4mtar en faktura fr\u00E5n Fortnox baserat p\u00E5 fakturanummer.",
+          "parameters": {
+            "documentNumber": {
+              "type": "string",
+              "required": false,
+              "description": "Fakturanummer"
+            }
+          }
+        },
+        {
+          "name": "PreviewInvoiceAsync",
+          "description": "F\u00F6rhandsgranskning. Visar fakturan som PDF, fakturan markeras inte som skickad.",
+          "parameters": {
+            "documentNumber": {
+              "type": "string",
+              "required": false,
+              "description": "Fakturanummer"
+            }
+          }
+        },
+        {
+          "name": "PrintInvoiceAsync",
+          "description": "H\u00E4mtar fakturan som PDF, fakturan markeras som skickad.",
+          "parameters": {
+            "documentNumber": {
+              "type": "string",
+              "required": false,
+              "description": "Fakturanummer"
+            }
+          }
+        },
+        {
+          "name": "PrintReminderInvoiceAsync",
+          "description": "P\u00E5minnelsefaktura, h\u00E4mtar fakturans PDF som en p\u00E5minnelsefaktura.",
+          "parameters": {
+            "documentNumber": {
+              "type": "string",
+              "required": false,
+              "description": "Fakturanummer"
+            }
+          }
+        },
+        {
+          "name": "SearchInvoicesAsync",
+          "description": "S\u00F6ker efter fakturor i Fortnox",
+          "parameters": {
+            "filter": {
+              "type": "string",
+              "required": false,
+              "description": "Filter, val: "
+            },
+            "documentNumber": {
+              "type": "string",
+              "required": false,
+              "description": "Fakturanr"
+            },
+            "customerNumber": {
+              "type": "string",
+              "required": false,
+              "description": "Kundnr"
+            },
+            "customerName": {
+              "type": "string",
+              "required": false,
+              "description": "Kundens namn"
+            },
+            "fromDate": {
+              "type": "string",
+              "required": false,
+              "description": "Fr\u00E5n datum"
+            },
+            "toDate": {
+              "type": "string",
+              "required": false,
+              "description": "Till datum"
+            }
+          }
+        },
+        {
+          "name": "SendInvoiceAsEmailAsync",
+          "description": "Skickar en faktura via email. Uppgifterna p\u00E5 f\u00E4ltet EmailInformation i fakturan anv\u00E4nds f\u00F6r att skapa emailet, som t.ex. mottagare, avs\u00E4ndare, \u00E4mne och text",
+          "parameters": {
+            "documentNumber": {
+              "type": "string",
+              "required": false,
+              "description": "Fakturanummer"
+            }
+          }
+        },
+        {
+          "name": "SetInvoiceAsSentAsync",
+          "description": "Markera en faktura som skickad i Fortnox. Returnerar den uppdaterade fakturan.",
+          "parameters": {
+            "documentNumber": {
+              "type": "string",
+              "required": false,
+              "description": "Fakturanummer"
+            }
+          }
+        },
+        {
+          "name": "UpdateInvoiceAsync",
+          "description": "Uppdaterar en faktura i Fortnox. Returnerar den uppdaterade fakturan.",
+          "parameters": {
+            "documentNumber": {
+              "type": "string",
+              "required": false,
+              "description": "Fakturanummer"
+            },
+            "invoiceRequest": {
+              "type": "string",
+              "required": false,
+              "description": "Faktura"
+            }
+          }
+        },
+        {
+          "name": "GetProjectsAsync",
+          "description": "H\u00E4mtar en lista med projekt fr\u00E5n Fortnox. Lista projekt, visa projekt, s\u00F6k projekt.",
+          "parameters": {}
+        },
+        {
+          "name": "GetProjectAsync",
+          "description": "H\u00E4mtar ett projekt baserat p\u00E5 projektnummer. Visa projekt.",
+          "parameters": {
+            "projectNumber": {
+              "type": "string",
+              "required": false,
+              "description": "Projektnummer"
+            }
+          }
+        },
+        {
+          "name": "CreateProjectAsync",
+          "description": "Skapar ett nytt projekt i Fortnox. Skapa projekt.",
+          "parameters": {
+            "project": {
+              "type": "string",
+              "required": false,
+              "description": "Projektdata"
+            }
+          }
+        },
+        {
+          "name": "UpdateProjectAsync",
+          "description": "Uppdaterar ett projekt i Fortnox baserat p\u00E5 projektnummer. Uppdatera projekt.",
+          "parameters": {
+            "projectNumber": {
+              "type": "string",
+              "required": false,
+              "description": "Projektnummer"
+            },
+            "project": {
+              "type": "string",
+              "required": false,
+              "description": "Uppdaterad projektdata"
+            }
+          }
+        },
+        {
+          "name": "ArchiveProjectAsync",
+          "description": "Arkiverar ett projekt i Fortnox. Arkivera projekt.",
+          "parameters": {
+            "projectNumber": {
+              "type": "string",
+              "required": false,
+              "description": "Projektnummer"
+            }
+          }
+        },
+        {
+          "name": "DeleteProjectAsync",
+          "description": "Tar bort (inaktiverar) ett projekt i Fortnox baserat p\u00E5 projektnummer. Ta bort projekt.",
+          "parameters": {
+            "projectNumber": {
+              "type": "string",
+              "required": false,
+              "description": "Projektnummer"
+            }
+          }
+        },
+        {
+          "name": "GetSIEAsync",
+          "description": "STEG 1: H\u00E4mtar bokf\u00F6ringsdata (SIE-filer) f\u00F6r specifika \u00E5r fr\u00E5n Fortnox. Anv\u00E4nd denna funktion F\u00D6RST n\u00E4r anv\u00E4ndaren vill skapa rapporter, analysera ekonomi, eller h\u00E4mta bokf\u00F6ringsdata f\u00F6r ett eller flera \u00E5r. Sparar data i TempFilesService f\u00F6r vidare bearbetning av AnalysisPlugin. Efter denna funktion, anv\u00E4nd AnalysisPlugin f\u00F6r att skapa Excel-rapporter.",
+          "parameters": {
+            "financialYears": {
+              "type": "string",
+              "required": false,
+              "description": "R\u00E4kenskaps\u00E5r att h\u00E4mta bokf\u00F6ringsdata f\u00F6r. Exempel: \u00272022\u0027 f\u00F6r ett \u00E5r, \u00272020,2021,2022\u0027 f\u00F6r flera \u00E5r, eller l\u00E4mna tomt f\u00F6r alla tillg\u00E4ngliga \u00E5r. Accepterar \u00E5r som anv\u00E4ndaren n\u00E4mner i sin f\u00F6rfr\u00E5gan."
+            }
+          }
+        },
+        {
+          "name": "GetSIEPreviewAsync",
+          "description": "Visar inneh\u00E5llet fr\u00E5n bokf\u00F6ringsdata (SIE-fil) f\u00F6r ett specifikt \u00E5r. Anv\u00E4nd denna funktion n\u00E4r anv\u00E4ndaren vill se inneh\u00E5llet i en SIE-fil, kontrollera format, eller f\u00E5 en f\u00F6rhandsvisning av bokf\u00F6ringsdata innan vidare bearbetning.",
+          "parameters": {
+            "financialYear": {
+              "type": "string",
+              "required": false,
+              "description": "R\u00E4kenskaps\u00E5r att visa data f\u00F6r. Exempel: \u00272022\u0027, \u00272021\u0027, etc. Om inget anges visas det senaste \u00E5ret."
+            }
+          }
+        },
+        {
+          "name": "GetSuppliersAsync",
+          "description": "H\u00E4mtar en lista med leverant\u00F6rer fr\u00E5n Fortnox.",
+          "parameters": {}
+        },
+        {
+          "name": "GetSupplierAsync",
+          "description": "H\u00E4mtar en leverant\u00F6r fr\u00E5n Fortnox baserat p\u00E5 leverant\u00F6rsnummer.",
+          "parameters": {
+            "supplierNumber": {
+              "type": "string",
+              "required": false,
+              "description": ""
+            }
+          }
+        },
+        {
+          "name": "CreateSupplierAsync",
+          "description": "Skapar en leverant\u00F6r i Fortnox.",
+          "parameters": {
+            "supplier": {
+              "type": "string",
+              "required": false,
+              "description": ""
+            }
+          }
+        },
+        {
+          "name": "UpdateSupplierAsync",
+          "description": "Uppdaterar en leverant\u00F6r i Fortnox baserat p\u00E5 leverant\u00F6rsnummer.",
+          "parameters": {
+            "supplierNumber": {
+              "type": "string",
+              "required": false,
+              "description": ""
+            },
+            "supplier": {
+              "type": "string",
+              "required": false,
+              "description": ""
+            }
+          }
+        },
+        {
+          "name": "DeleteSupplierAsync",
+          "description": "Tar bort en leverant\u00F6r fr\u00E5n Fortnox baserat p\u00E5 leverant\u00F6rsnummer.",
+          "parameters": {
+            "supplierNumber": {
+              "type": "string",
+              "required": false,
+              "description": ""
+            }
+          }
+        },
+        {
+          "name": "GetSupplierInvoicesAsync",
+          "description": "H\u00E4mtar en lista med leverant\u00F6rsfakturor fr\u00E5n Fortnox.",
+          "parameters": {}
+        },
+        {
+          "name": "GetSupplierInvoiceAsync",
+          "description": "H\u00E4mtar en leverant\u00F6rsfaktura fr\u00E5n Fortnox baserat p\u00E5 faktura-ID.",
+          "parameters": {
+            "invoiceId": {
+              "type": "string",
+              "required": false,
+              "description": ""
+            }
+          }
+        },
+        {
+          "name": "CreateSupplierInvoiceAsync",
+          "description": "Skapar en leverant\u00F6rsfaktura i Fortnox.",
+          "parameters": {
+            "invoice": {
+              "type": "string",
+              "required": false,
+              "description": ""
+            }
+          }
+        },
+        {
+          "name": "UpdateSupplierInvoiceAsync",
+          "description": "Uppdaterar en leverant\u00F6rsfaktura i Fortnox baserat p\u00E5 faktura-ID.",
+          "parameters": {
+            "invoiceId": {
+              "type": "string",
+              "required": false,
+              "description": ""
+            },
+            "invoice": {
+              "type": "string",
+              "required": false,
+              "description": ""
+            }
+          }
+        },
+        {
+          "name": "DeleteSupplierInvoiceAsync",
+          "description": "Tar bort en leverant\u00F6rsfaktura fr\u00E5n Fortnox baserat p\u00E5 faktura-ID.",
+          "parameters": {
+            "invoiceId": {
+              "type": "string",
+              "required": false,
+              "description": ""
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "metadata": {
+    "generatedAt": "2026-05-09T19:24:43.569573Z",
+    "version": "1.0",
+    "totalPlugins": 15,
+    "totalFunctions": 123
+  }
+}
