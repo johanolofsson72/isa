@@ -88,11 +88,9 @@ echo "$TIMESTAMP - Deployed $STACK_NAME TAG=$TAG AGENT=$AGENT_IMAGE WEB=$WEB_IMA
 log "📘 Log saved: $LOG_FILE"
 
 # === 🗑️ Docker cleanup === (omskrivet)
-log "🧹 Rensar Docker system (images/volumes/containers/networks äldre än 24h där möjligt)..."
+log "🧹 Rensar Docker system (images/containers äldre än 24h; volymer och nätverk lämnas orörda)..."
 docker image prune -af --filter "until=24h" > /dev/null 2>&1 || true
-docker volume prune -f > /dev/null 2>&1 || true
 docker container prune -f > /dev/null 2>&1 || true
-docker network prune -f > /dev/null 2>&1 || true
 
 # === 📧 Notifiering ===
 if [[ -n "${MAILJET_APIKEY:-}" && -n "${MAILJET_SECRET:-}" && "${MAILJET_APIKEY}" != "" && "${MAILJET_SECRET}" != "" ]]; then
@@ -124,14 +122,6 @@ EOF
   fi
 else
   log "ℹ️ Skipping email notification (MAILJET_APIKEY/MAILJET_SECRET empty or not set)."
-fi
-
-# 🧼 Rensa registry (om script finns)
-if [[ -x "$HOME/deploy/clean-registry.sh" ]]; then
-  log "🧼 Kör clean-registry.sh ..."
-  bash "$HOME/deploy/clean-registry.sh" || log "⚠️ Registry cleanup misslyckades"
-else
-  log "ℹ️ clean-registry.sh saknas, hoppar över registry-städning."
 fi
 
 log ""
